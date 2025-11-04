@@ -22,13 +22,15 @@ View your app in AI Studio: https://ai.studio/apps/drive/11fGBCY5TvCYgSimd4g6-LN
 
 This project is configured to deploy automatically to Render as a static site.
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/farhanrafiq/union)
+
 ### Option 1: Automatic Deployment (Recommended)
-1. Connect your GitHub repository to Render at https://dashboard.render.com/new/static-site
+1. Connect your GitHub repository to Render at https://dashboard.render.com/new/static-site or click the "Deploy to Render" button above
 2. Render will automatically detect the `render.yaml` configuration file
 3. Your app will be deployed with these settings:
    - **Build Command**: `npm run build`
    - **Publish Directory**: `dist`
-   - **Environment**: Node.js
+   - SPA rewrite to `index.html` is already configured in `render.yaml`
 
 ### Option 2: Manual Configuration
 If you prefer to configure manually in the Render dashboard:
@@ -37,7 +39,11 @@ If you prefer to configure manually in the Render dashboard:
 3. Set the following build settings:
    - **Build Command**: `npm run build`
    - **Publish Directory**: `dist`
-   - **Environment**: Node.js (>=18)
+   - (Optional) Add environment variable `GEMINI_API_KEY` if your app uses it
+
+### Environment variables
+- Local development: create a `.env.local` file with `GEMINI_API_KEY=...` if needed.
+- Render: the `render.yaml` includes an env var placeholder for `GEMINI_API_KEY` with `sync: false`. Set its value in the Render dashboard (Static Site -> Environment -> Add Environment Variable) so it's available at build time.
 
 ### Build Verification
 To verify your build works locally before deploying:

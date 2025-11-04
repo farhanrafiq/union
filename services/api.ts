@@ -280,6 +280,18 @@ export const api = {
       }
       throw new Error("Customer not found");
   },
+
+  terminateCustomer: async (customerId: string): Promise<Customer> => {
+      await delay(500);
+      const index = mockCustomers.findIndex(c => c.id === customerId);
+      if (index > -1) {
+          mockCustomers[index].status = 'inactive';
+          addAuditLog(AuditActionType.UPDATE_CUSTOMER, `Deactivated customer ${mockCustomers[index].nameOrEntity}`);
+          persistData();
+          return mockCustomers[index];
+      }
+      throw new Error("Customer not found");
+  },
   
   universalSearch: async (query: string): Promise<GlobalSearchResult[]> => {
     await delay(700);

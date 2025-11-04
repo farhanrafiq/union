@@ -38,6 +38,7 @@ const DealerDashboard: React.FC<DealerDashboardProps> = ({ currentPage = 'Dashbo
   const [isEmployeeModalOpen, setEmployeeModalOpen] = useState(false);
   const [isCustomerModalOpen, setCustomerModalOpen] = useState(false);
   const [isTerminationModalOpen, setTerminationModalOpen] = useState(false);
+  const [isCustomerTerminationModalOpen, setCustomerTerminationModalOpen] = useState(false);
 
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -58,6 +59,7 @@ const DealerDashboard: React.FC<DealerDashboardProps> = ({ currentPage = 'Dashbo
     setEmployeeModalOpen(false);
     setCustomerModalOpen(false);
     setTerminationModalOpen(false);
+    setCustomerTerminationModalOpen(false);
     fetchData();
   };
   
@@ -67,6 +69,14 @@ const DealerDashboard: React.FC<DealerDashboardProps> = ({ currentPage = 'Dashbo
   
   const handleAddCustomer = () => { setSelectedCustomer(null); setCustomerModalOpen(true); };
   const handleEditCustomer = (customer: Customer) => { setSelectedCustomer(customer); setCustomerModalOpen(true); };
+  const handleTerminateCustomer = (customer: Customer) => { setSelectedCustomer(customer); setCustomerTerminationModalOpen(true); };
+
+  const confirmTerminateCustomer = async () => {
+    if (selectedCustomer) {
+      await api.terminateCustomer(selectedCustomer.id);
+      handleSave();
+    }
+  };
 
   const activeEmployees = employees.filter(e => e.status === 'active').length;
   const privateCustomers = customers.filter(c => c.type === 'private').length;
@@ -134,8 +144,13 @@ const DealerDashboard: React.FC<DealerDashboardProps> = ({ currentPage = 'Dashbo
             <td className="px-4 py-3">
               <Badge color={customer.status === 'active' ? 'green' : 'gray'}>{customer.status}</Badge>
             </td>
-              <td className="px-4 py-3">
-                <Button size="sm" variant="secondary" onClick={() => handleEditCustomer(customer)}>Edit</Button>
+            <td className="px-4 py-3 text-right align-middle min-w-[180px]">
+              <div className="inline-flex items-center gap-2">
+                <Button size="sm" variant="secondary" className="whitespace-nowrap" onClick={() => handleEditCustomer(customer)}>Edit</Button>
+                {customer.status === 'active' && (
+                  <Button size="sm" variant="danger" className="whitespace-nowrap" onClick={() => handleTerminateCustomer(customer)}>Deactivate</Button>
+                )}
+              </div>
             </td>
           </tr>
         ))}
@@ -194,6 +209,14 @@ const DealerDashboard: React.FC<DealerDashboardProps> = ({ currentPage = 'Dashbo
         employee={selectedEmployee}
         onSave={handleSave}
       />
+
+      <Modal isOpen={isCustomerTerminationModalOpen} onClose={() => setCustomerTerminationModalOpen(false)} title="Deactivate Customer">
+        <p>Are you sure you want to deactivate <strong>{selectedCustomer?.nameOrEntity}</strong>? This will mark the customer as inactive.</p>
+        <div className="flex justify-end gap-4 mt-6">
+            <Button variant="secondary" onClick={() => setCustomerTerminationModalOpen(false)}>Cancel</Button>
+            <Button variant="danger" onClick={confirmTerminateCustomer}>Deactivate</Button>
+        </div>
+      </Modal>
     </>
   );
 };

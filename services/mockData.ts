@@ -49,6 +49,8 @@ export let mockEmployees: Employee[] = [
 export let mockCustomers: Customer[] = [
   { id: 'cust-1', dealerId: 'dealer-1', type: 'private', nameOrEntity: 'Alice Johnson', phone: '555-8888', email: 'alice@email.com', officialId: 'DL-ALICE-1', address: '1 B St', status: 'active' },
   { id: 'cust-2', dealerId: 'dealer-2', type: 'government', nameOrEntity: 'City of Somecity', contactPerson: 'Bob Williams', phone: '555-9999', email: 'bob@somecity.gov', officialId: 'GOV-456', address: '1 City Hall', status: 'active' },
+  { id: 'cust-3', dealerId: 'dealer-1', type: 'private', nameOrEntity: 'Charles Brown', phone: '555-7777', email: 'charles@email.com', officialId: 'DL-CHARLES-2', address: '22 Oak St', status: 'active' },
+  { id: 'cust-4', dealerId: 'dealer-1', type: 'government', nameOrEntity: 'State Highway Department', contactPerson: 'Diana Smith', phone: '555-6666', email: 'diana@highway.gov', officialId: 'GOV-789', address: '100 Capitol Ave', status: 'active' },
 ];
 
 export let mockAuditLogs: AuditLog[] = [

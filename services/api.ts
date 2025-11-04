@@ -187,6 +187,11 @@ export const api = {
   
   createEmployee: async (dealerId: string, employeeData: Omit<Employee, 'id' | 'dealerId' | 'status'>): Promise<Employee> => {
       await delay(500);
+      // Check for duplicate Aadhar number
+      const duplicateAadhar = mockEmployees.find(e => e.aadhar === employeeData.aadhar);
+      if (duplicateAadhar) {
+          throw new Error(`An employee with Aadhar number ${employeeData.aadhar} already exists.`);
+      }
       const newEmployee: Employee = { id: `emp-${Date.now()}`, dealerId, status: 'active', ...employeeData};
       mockEmployees.push(newEmployee);
       addAuditLog(AuditActionType.CREATE_EMPLOYEE, `Created employee ${newEmployee.firstName} ${newEmployee.lastName}`);
@@ -197,6 +202,13 @@ export const api = {
       await delay(500);
       const index = mockEmployees.findIndex(e => e.id === employeeId);
       if (index > -1) {
+          // Check for duplicate Aadhar if it's being updated
+          if (data.aadhar) {
+              const duplicateAadhar = mockEmployees.find(e => e.aadhar === data.aadhar && e.id !== employeeId);
+              if (duplicateAadhar) {
+                  throw new Error(`An employee with Aadhar number ${data.aadhar} already exists.`);
+              }
+          }
           mockEmployees[index] = { ...mockEmployees[index], ...data };
           addAuditLog(AuditActionType.UPDATE_EMPLOYEE, `Updated employee ${mockEmployees[index].firstName} ${mockEmployees[index].lastName}`);
           return mockEmployees[index];
@@ -219,6 +231,11 @@ export const api = {
 
   createCustomer: async (dealerId: string, customerData: Omit<Customer, 'id' | 'dealerId' | 'status'>): Promise<Customer> => {
       await delay(500);
+      // Check for duplicate official ID
+      const duplicateOfficialId = mockCustomers.find(c => c.officialId === customerData.officialId);
+      if (duplicateOfficialId) {
+          throw new Error(`A customer with official ID ${customerData.officialId} already exists.`);
+      }
       const newCustomer: Customer = { id: `cust-${Date.now()}`, dealerId, status: 'active', ...customerData };
       mockCustomers.push(newCustomer);
       addAuditLog(AuditActionType.CREATE_CUSTOMER, `Created customer ${newCustomer.nameOrEntity}`);
@@ -229,6 +246,13 @@ export const api = {
       await delay(500);
       const index = mockCustomers.findIndex(c => c.id === customerId);
       if (index > -1) {
+          // Check for duplicate official ID if it's being updated
+          if (data.officialId) {
+              const duplicateOfficialId = mockCustomers.find(c => c.officialId === data.officialId && c.id !== customerId);
+              if (duplicateOfficialId) {
+                  throw new Error(`A customer with official ID ${data.officialId} already exists.`);
+              }
+          }
           mockCustomers[index] = { ...mockCustomers[index], ...data };
           addAuditLog(AuditActionType.UPDATE_CUSTOMER, `Updated customer ${mockCustomers[index].nameOrEntity}`);
           return mockCustomers[index];

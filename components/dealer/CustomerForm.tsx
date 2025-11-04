@@ -13,6 +13,7 @@ interface CustomerFormProps {
 
 const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSave }) => {
     const { user } = useAuth();
+    const [error, setError] = useState('');
     const [formData, setFormData] = useState({
         type: 'private' as 'private' | 'government',
         nameOrEntity: '',
@@ -46,21 +47,31 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSave }) => {
         e.preventDefault();
         if (!user?.dealerId) return;
 
-        const submissionData = {
-            ...formData,
-            contactPerson: formData.type === 'government' ? formData.contactPerson : undefined,
-        };
+        setError('');
+        try {
+            const submissionData = {
+                ...formData,
+                contactPerson: formData.type === 'government' ? formData.contactPerson : undefined,
+            };
 
-        if (customer) {
-            await api.updateCustomer(customer.id, submissionData);
-        } else {
-            await api.createCustomer(user.dealerId, submissionData);
+            if (customer) {
+                await api.updateCustomer(customer.id, submissionData);
+            } else {
+                await api.createCustomer(user.dealerId, submissionData);
+            }
+            onSave();
+        } catch (err) {
+            setError((err as Error).message);
         }
-        onSave();
     };
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">
+                    {error}
+                </div>
+            )}
             <div>
                 <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">Customer Type</label>
                 <select id="type" name="type" value={formData.type} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-white text-gray-900 focus:outline-none focus:ring-primary focus:border-primary sm:text-sm">

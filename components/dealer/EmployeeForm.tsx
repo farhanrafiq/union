@@ -12,6 +12,7 @@ interface EmployeeFormProps {
 
 const EmployeeForm: React.FC<EmployeeFormProps> = ({ employee, onSave }) => {
     const { user } = useAuth();
+    const [error, setError] = useState('');
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
@@ -45,18 +46,28 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ employee, onSave }) => {
         e.preventDefault();
         if (!user?.dealerId) return;
         
-        const submissionData = { ...formData };
+        setError('');
+        try {
+            const submissionData = { ...formData };
 
-        if (employee) {
-            await api.updateEmployee(employee.id, submissionData);
-        } else {
-            await api.createEmployee(user.dealerId, submissionData);
+            if (employee) {
+                await api.updateEmployee(employee.id, submissionData);
+            } else {
+                await api.createEmployee(user.dealerId, submissionData);
+            }
+            onSave();
+        } catch (err) {
+            setError((err as Error).message);
         }
-        onSave();
     };
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-sm">
+                    {error}
+                </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input label="First Name" name="firstName" value={formData.firstName} onChange={handleChange} required />
                 <Input label="Last Name" name="lastName" value={formData.lastName} onChange={handleChange} required />

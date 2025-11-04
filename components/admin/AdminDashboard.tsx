@@ -156,9 +156,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentPage = 'Dashboar
             <td className="px-4 py-3">
               <Badge color={dealer.status === 'active' ? 'green' : 'red'}>{dealer.status}</Badge>
             </td>
-            <td className="px-4 py-3 space-x-2">
-              <Button size="sm" variant="secondary" onClick={() => handleEditDealer(dealer)}>Edit</Button>
-              <Button size="sm" variant="secondary" onClick={() => handleOpenResetModal(dealer)}>Reset PW</Button>
+            <td className="px-4 py-3 text-right align-middle min-w-[180px]">
+              <div className="inline-flex items-center gap-2">
+                <Button size="sm" variant="secondary" className="whitespace-nowrap" onClick={() => handleEditDealer(dealer)}>Edit</Button>
+                <Button size="sm" variant="secondary" className="whitespace-nowrap" onClick={() => handleOpenResetModal(dealer)}>Reset PW</Button>
+              </div>
             </td>
           </tr>
         ))}

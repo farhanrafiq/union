@@ -6,10 +6,20 @@ import {
     mockAuditLogs
 } from './mockData';
 import { UserRole, Dealer, Employee, Customer, AuditLog, GlobalSearchResult, AuditActionType, User } from '../types';
+import { storage } from '../utils/storage';
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
 let currentUser: User | null = null;
+
+// Helper to persist data after mutations
+const persistData = () => {
+    storage.setUsers(mockUsers);
+    storage.setDealers(mockDealers);
+    storage.setEmployees(mockEmployees);
+    storage.setCustomers(mockCustomers);
+    storage.setAuditLogs(mockAuditLogs);
+};
 
 const addAuditLog = (actionType: AuditActionType, details: string) => {
     if (!currentUser) return;
@@ -28,6 +38,7 @@ const addAuditLog = (actionType: AuditActionType, details: string) => {
         ipAddress: '127.0.0.1',
         timestamp: new Date().toISOString()
     });
+    persistData(); // Save after adding audit log
 };
 
 const generateGlobalIndex = (): GlobalSearchResult[] => {
@@ -107,6 +118,7 @@ export const api = {
         user.tempPassword = null;
         user.tempPasswordExpiry = null;
         addAuditLog(AuditActionType.CHANGE_PASSWORD, "User changed their temporary password.");
+        persistData();
         console.log(`Password for ${user.email} changed to ${newPassword}`);
     }
   },
@@ -117,6 +129,7 @@ export const api = {
       if (userIndex !== -1) {
           mockUsers[userIndex] = { ...mockUsers[userIndex], ...data };
           addAuditLog(AuditActionType.UPDATE_DEALER, `User profile for ${mockUsers[userIndex].name} updated.`);
+          persistData();
           return mockUsers[userIndex];
       }
       throw new Error("User not found");
@@ -155,6 +168,7 @@ export const api = {
     }
     mockUsers.push(newUser);
     addAuditLog(AuditActionType.CREATE_DEALER, `Created dealer ${newDealer.companyName}`);
+    persistData();
     return { dealer: newDealer, tempPassword };
   },
 
@@ -164,6 +178,7 @@ export const api = {
       if (dealerIndex !== -1) {
           mockDealers[dealerIndex] = { ...mockDealers[dealerIndex], ...data };
           addAuditLog(AuditActionType.UPDATE_DEALER, `Updated dealer ${mockDealers[dealerIndex].companyName}`);
+          persistData();
           return mockDealers[dealerIndex];
       }
       throw new Error("Dealer not found");
@@ -177,6 +192,7 @@ export const api = {
           user.tempPassword = tempPassword;
           user.tempPasswordExpiry = new Date(Date.now() + 72 * 3600 * 1000).toISOString();
           addAuditLog(AuditActionType.RESET_PASSWORD, `Reset password for user ${user.name}`);
+          persistData();
           return tempPassword;
       }
       throw new Error("User for dealer not found");
@@ -195,6 +211,7 @@ export const api = {
       const newEmployee: Employee = { id: `emp-${Date.now()}`, dealerId, status: 'active', ...employeeData};
       mockEmployees.push(newEmployee);
       addAuditLog(AuditActionType.CREATE_EMPLOYEE, `Created employee ${newEmployee.firstName} ${newEmployee.lastName}`);
+      persistData();
       return newEmployee;
   },
 
@@ -211,6 +228,7 @@ export const api = {
           }
           mockEmployees[index] = { ...mockEmployees[index], ...data };
           addAuditLog(AuditActionType.UPDATE_EMPLOYEE, `Updated employee ${mockEmployees[index].firstName} ${mockEmployees[index].lastName}`);
+          persistData();
           return mockEmployees[index];
       }
       throw new Error("Employee not found");
@@ -224,6 +242,7 @@ export const api = {
           mockEmployees[index].terminationReason = reason;
           mockEmployees[index].terminationDate = date;
           addAuditLog(AuditActionType.TERMINATE_EMPLOYEE, `Terminated employee ${mockEmployees[index].firstName} ${mockEmployees[index].lastName}`);
+          persistData();
           return mockEmployees[index];
       }
       throw new Error("Employee not found");
@@ -239,6 +258,7 @@ export const api = {
       const newCustomer: Customer = { id: `cust-${Date.now()}`, dealerId, status: 'active', ...customerData };
       mockCustomers.push(newCustomer);
       addAuditLog(AuditActionType.CREATE_CUSTOMER, `Created customer ${newCustomer.nameOrEntity}`);
+      persistData();
       return newCustomer;
   },
 
@@ -255,6 +275,7 @@ export const api = {
           }
           mockCustomers[index] = { ...mockCustomers[index], ...data };
           addAuditLog(AuditActionType.UPDATE_CUSTOMER, `Updated customer ${mockCustomers[index].nameOrEntity}`);
+          persistData();
           return mockCustomers[index];
       }
       throw new Error("Customer not found");

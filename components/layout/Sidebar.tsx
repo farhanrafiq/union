@@ -64,7 +64,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen, currentP
   return (
     <>
       <div className={`fixed inset-0 bg-black bg-opacity-25 z-20 transition-opacity lg:hidden ${sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setSidebarOpen(false)}></div>
-      <div className={`flex flex-col w-64 bg-gray-800 text-white fixed inset-y-0 left-0 transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0 transition-transform duration-200 ease-in-out z-30`}>
+      <div className={`flex flex-col w-64 bg-gray-800 text-white fixed inset-y-0 left-0 transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:min-h-screen lg:translate-x-0 transition-transform duration-200 ease-in-out z-30`}>
         <div className="flex items-center justify-center mt-8">
           <div className="flex items-center">
             <span className="text-white text-2xl mx-2 font-semibold">Union Registry</span>

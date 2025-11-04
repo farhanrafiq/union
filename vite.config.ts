@@ -7,7 +7,18 @@ export default defineConfig(({ mode }) => {
     return {
       server: {
         port: 3000,
-        host: '0.0.0.0',
+        host: true,
+        allowedHosts: [
+          process.env.RENDER_EXTERNAL_HOSTNAME,
+          'union-1.onrender.com',
+        ].filter(Boolean) as string[],
+      },
+      preview: {
+        host: true,
+        allowedHosts: [
+          process.env.RENDER_EXTERNAL_HOSTNAME,
+          'union-1.onrender.com',
+        ].filter(Boolean) as string[],
       },
       plugins: [react()],
       define: {

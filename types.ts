@@ -35,8 +35,11 @@ export interface Dealer {
   primaryContactPhone: string;
   primaryContactEmail: string;
   address: string;
-  status: 'active' | 'suspended';
+  status: 'active' | 'suspended' | 'deleted';
   createdAt: string;
+  suspensionReason?: string;
+  deletionReason?: string;
+  deletionDate?: string;
 }
 
 export interface Employee {
@@ -65,6 +68,8 @@ export interface Customer {
   officialId: string;
   address: string;
   status: 'active' | 'inactive';
+  terminationDate?: string;
+  terminationReason?: string;
 }
 
 export interface AuditLog {

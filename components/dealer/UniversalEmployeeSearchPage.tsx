@@ -85,15 +85,26 @@ const UniversalEmployeeSearchPage: React.FC = () => {
                     <div className="flex justify-between items-start">
                     <div>
                         <p className="font-bold text-lg text-primary">{result.canonicalName}</p>
-                        <p className="text-sm text-gray-500 capitalize">{result.entityType} {result.customerType ? `(${result.customerType})` : ''} | Owner: {result.ownerDealerName}</p>
+                        <p className="text-sm text-gray-500 capitalize">
+                            {result.entityType} {result.customerType ? `(${result.customerType})` : ''} | 
+                            <span className="font-semibold"> Working with: {result.ownerDealerName}</span>
+                        </p>
                     </div>
                     <Badge color={getStatusColor(result.statusSummary)}>{result.statusSummary}</Badge>
                     </div>
-                    {result.entityType === 'employee' && result.statusSummary === 'terminated' && result.terminationDate && result.terminationReason && (
+                    {result.statusSummary === 'terminated' && result.terminationDate && result.terminationReason && (
                     <div className="mt-3 pt-3 border-t border-red-200">
                         <div className="p-3 bg-red-50 rounded-md">
                             <p><strong className="font-semibold text-red-800">Terminated on:</strong> <span className="text-red-700">{formatDate(result.terminationDate)}</span></p>
                             <p><strong className="font-semibold text-red-800">Reason:</strong> <span className="text-red-700">{result.terminationReason}</span></p>
+                        </div>
+                    </div>
+                    )}
+                    {result.statusSummary === 'inactive' && result.terminationDate && result.terminationReason && (
+                    <div className="mt-3 pt-3 border-t border-gray-200">
+                        <div className="p-3 bg-gray-100 rounded-md">
+                            <p><strong className="font-semibold text-gray-800">Terminated on:</strong> <span className="text-gray-700">{formatDate(result.terminationDate)}</span></p>
+                            <p><strong className="font-semibold text-gray-800">Reason:</strong> <span className="text-gray-700">{result.terminationReason}</span></p>
                         </div>
                     </div>
                     )}

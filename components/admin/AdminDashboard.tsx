@@ -9,6 +9,8 @@ import { formatDateTime, downloadCSV } from '../../utils/helpers';
 import DealerForm from './DealerForm';
 import Modal from '../common/Modal';
 import UniversalEmployeeSearchPage from '../dealer/UniversalEmployeeSearchPage';
+import DealerSuspensionModal from './DealerSuspensionModal';
+import DealerDeletionModal from './DealerDeletionModal';
 
 const UsersIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -41,6 +43,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentPage = 'Dashboar
   const [dealerToReset, setDealerToReset] = useState<Dealer | null>(null);
   const [passwordInfo, setPasswordInfo] = useState<{ dealerName: string, tempPass: string } | null>(null);
   const [error, setError] = useState('');
+  
+  const [isSuspensionModalOpen, setIsSuspensionModalOpen] = useState(false);
+  const [isDeletionModalOpen, setIsDeletionModalOpen] = useState(false);
+  const [dealerToSuspend, setDealerToSuspend] = useState<Dealer | null>(null);
+  const [dealerToDelete, setDealerToDelete] = useState<Dealer | null>(null);
 
   const fetchData = async () => {
       const dealersData = await api.getDealers();
@@ -100,8 +107,44 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentPage = 'Dashboar
   const handleExportDealers = () => downloadCSV(dealers, 'dealers_export');
   const handleExportLogs = () => downloadCSV(auditLogs, 'auditlog_export');
 
+  const handleSuspendDealer = (dealer: Dealer) => {
+    setDealerToSuspend(dealer);
+    setIsSuspensionModalOpen(true);
+  };
+
+  const handleConfirmSuspend = async (reason: string) => {
+    if (dealerToSuspend) {
+      await api.suspendDealer(dealerToSuspend.id, reason);
+      setIsSuspensionModalOpen(false);
+      setDealerToSuspend(null);
+      fetchData();
+    }
+  };
+
+  const handleActivateDealer = async (dealer: Dealer) => {
+    if (confirm(`Are you sure you want to activate ${dealer.companyName}?`)) {
+      await api.activateDealer(dealer.id);
+      fetchData();
+    }
+  };
+
+  const handleDeleteDealer = (dealer: Dealer) => {
+    setDealerToDelete(dealer);
+    setIsDeletionModalOpen(true);
+  };
+
+  const handleConfirmDelete = async (reason: string) => {
+    if (dealerToDelete) {
+      await api.deleteDealer(dealerToDelete.id, reason);
+      setIsDeletionModalOpen(false);
+      setDealerToDelete(null);
+      fetchData();
+    }
+  };
+
   const recentSearches = auditLogs.filter(log => log.actionType === 'search').length;
   const recentTerminations = auditLogs.filter(log => log.actionType === 'terminate_employee').length;
+  const activeDealersCount = dealers.filter(d => d.status !== 'deleted').length;
 
   const renderStats = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
@@ -109,8 +152,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentPage = 'Dashboar
         <div className="flex items-center">
           <UsersIcon />
           <div className="ml-4">
-            <p className="text-lg font-semibold text-gray-700">{dealers.length}</p>
-            <p className="text-sm text-gray-500">Total Dealers</p>
+            <p className="text-lg font-semibold text-gray-700">{activeDealersCount}</p>
+            <p className="text-sm text-gray-500">Active Dealers</p>
           </div>
         </div>
       </Card>
@@ -154,12 +197,33 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentPage = 'Dashboar
               <p className="text-xs text-gray-600">{dealer.primaryContactEmail}</p>
             </td>
             <td className="px-4 py-3">
-              <Badge color={dealer.status === 'active' ? 'green' : 'red'}>{dealer.status}</Badge>
+              <Badge color={dealer.status === 'active' ? 'green' : dealer.status === 'suspended' ? 'yellow' : 'red'}>
+                {dealer.status}
+              </Badge>
+              {dealer.suspensionReason && (
+                <p className="text-xs text-gray-600 mt-1">Reason: {dealer.suspensionReason}</p>
+              )}
+              {dealer.deletionReason && (
+                <p className="text-xs text-gray-600 mt-1">Reason: {dealer.deletionReason}</p>
+              )}
             </td>
-            <td className="px-4 py-3 text-right align-middle min-w-[180px]">
-              <div className="inline-flex items-center gap-2">
-                <Button size="sm" variant="secondary" className="whitespace-nowrap" onClick={() => handleEditDealer(dealer)}>Edit</Button>
-                <Button size="sm" variant="secondary" className="whitespace-nowrap" onClick={() => handleOpenResetModal(dealer)}>Reset PW</Button>
+            <td className="px-4 py-3 text-right align-middle min-w-[280px]">
+              <div className="inline-flex items-center gap-2 flex-wrap">
+                {dealer.status !== 'deleted' && (
+                  <>
+                    <Button size="sm" variant="secondary" className="whitespace-nowrap" onClick={() => handleEditDealer(dealer)}>Edit</Button>
+                    <Button size="sm" variant="secondary" className="whitespace-nowrap" onClick={() => handleOpenResetModal(dealer)}>Reset PW</Button>
+                  </>
+                )}
+                {dealer.status === 'active' && (
+                  <Button size="sm" variant="danger" className="whitespace-nowrap" onClick={() => handleSuspendDealer(dealer)}>Suspend</Button>
+                )}
+                {dealer.status === 'suspended' && (
+                  <Button size="sm" variant="primary" className="whitespace-nowrap" onClick={() => handleActivateDealer(dealer)}>Activate</Button>
+                )}
+                {dealer.status !== 'deleted' && (
+                  <Button size="sm" variant="danger" className="whitespace-nowrap" onClick={() => handleDeleteDealer(dealer)}>Delete</Button>
+                )}
               </div>
             </td>
           </tr>
@@ -185,15 +249,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentPage = 'Dashboar
     </Card>
   );
 
-  const renderDashboardView = () => (
-    <>
-        {renderStats()}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-            {renderDealersList(dealers.slice(0, 5), "Recently Added Dealers", false)}
-            {renderAuditLogsList(auditLogs.slice(0, 5), "Recent Activity", false)}
-        </div>
-    </>
-  );
+  const renderDashboardView = () => {
+    const activeDealers = dealers.filter(d => d.status !== 'deleted');
+    return (
+      <>
+          {renderStats()}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+              {renderDealersList(activeDealers.slice(0, 5), "Recently Added Dealers", false)}
+              {renderAuditLogsList(auditLogs.slice(0, 5), "Recent Activity", false)}
+          </div>
+      </>
+    );
+  };
 
   return (
     <>
@@ -237,6 +304,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentPage = 'Dashboar
             <Button onClick={() => setPasswordInfo(null)}>Close</Button>
         </div>
       </Modal>
+
+      <DealerSuspensionModal
+        isOpen={isSuspensionModalOpen}
+        onClose={() => {
+          setIsSuspensionModalOpen(false);
+          setDealerToSuspend(null);
+        }}
+        dealerName={dealerToSuspend?.companyName || ''}
+        onConfirm={handleConfirmSuspend}
+      />
+
+      <DealerDeletionModal
+        isOpen={isDeletionModalOpen}
+        onClose={() => {
+          setIsDeletionModalOpen(false);
+          setDealerToDelete(null);
+        }}
+        dealerName={dealerToDelete?.companyName || ''}
+        onConfirm={handleConfirmDelete}
+      />
     </>
   );
 };

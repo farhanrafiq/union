@@ -11,6 +11,7 @@ import { formatDateTime } from '../../utils/helpers';
 import EmployeeForm from './EmployeeForm';
 import CustomerForm from './CustomerForm';
 import TerminationModal from './TerminationModal';
+import CustomerTerminationModal from './CustomerTerminationModal';
 import UniversalEmployeeSearchPage from './UniversalEmployeeSearchPage';
 
 const UserGroupIcon = () => (
@@ -70,13 +71,6 @@ const DealerDashboard: React.FC<DealerDashboardProps> = ({ currentPage = 'Dashbo
   const handleAddCustomer = () => { setSelectedCustomer(null); setCustomerModalOpen(true); };
   const handleEditCustomer = (customer: Customer) => { setSelectedCustomer(customer); setCustomerModalOpen(true); };
   const handleTerminateCustomer = (customer: Customer) => { setSelectedCustomer(customer); setCustomerTerminationModalOpen(true); };
-
-  const confirmTerminateCustomer = async () => {
-    if (selectedCustomer) {
-      await api.terminateCustomer(selectedCustomer.id);
-      handleSave();
-    }
-  };
 
   const activeEmployees = employees.filter(e => e.status === 'active').length;
   const privateCustomers = customers.filter(c => c.type === 'private').length;
@@ -148,7 +142,7 @@ const DealerDashboard: React.FC<DealerDashboardProps> = ({ currentPage = 'Dashbo
               <div className="inline-flex items-center gap-2">
                 <Button size="sm" variant="secondary" className="whitespace-nowrap" onClick={() => handleEditCustomer(customer)}>Edit</Button>
                 {customer.status === 'active' && (
-                  <Button size="sm" variant="danger" className="whitespace-nowrap" onClick={() => handleTerminateCustomer(customer)}>Deactivate</Button>
+                  <Button size="sm" variant="danger" className="whitespace-nowrap" onClick={() => handleTerminateCustomer(customer)}>Terminate</Button>
                 )}
               </div>
             </td>
@@ -210,13 +204,12 @@ const DealerDashboard: React.FC<DealerDashboardProps> = ({ currentPage = 'Dashbo
         onSave={handleSave}
       />
 
-      <Modal isOpen={isCustomerTerminationModalOpen} onClose={() => setCustomerTerminationModalOpen(false)} title="Deactivate Customer">
-        <p>Are you sure you want to deactivate <strong>{selectedCustomer?.nameOrEntity}</strong>? This will mark the customer as inactive.</p>
-        <div className="flex justify-end gap-4 mt-6">
-            <Button variant="secondary" onClick={() => setCustomerTerminationModalOpen(false)}>Cancel</Button>
-            <Button variant="danger" onClick={confirmTerminateCustomer}>Deactivate</Button>
-        </div>
-      </Modal>
+      <CustomerTerminationModal
+        isOpen={isCustomerTerminationModalOpen}
+        onClose={() => setCustomerTerminationModalOpen(false)}
+        customer={selectedCustomer}
+        onSave={handleSave}
+      />
     </>
   );
 };

@@ -53,3 +53,37 @@ npm run preview
 ```
 
 The build will create a `dist` folder containing the optimized static files ready for deployment.
+
+## Optional: Shared data across devices (Backend API)
+
+By default, data is stored in the browser (localStorage), which is per-device. To share data across devices, use the included backend API (Express + Prisma + PostgreSQL) in the `server/` folder.
+
+### Run the API locally
+1. Create a Postgres database (Docker or any local instance)
+2. Create `server/.env` with:
+   - `DATABASE_URL=postgres://user:pass@host:5432/dbname`
+   - `JWT_SECRET=a-long-random-string`
+3. From `server/` folder:
+   - `npm install`
+   - `npm run generate`
+   - `npm run migrate`
+   - `npm run seed` (creates a demo dealer: dealer1 / Union@2025)
+   - `npm run dev`
+
+### Point the frontend at the API
+1. Create `.env.local` in the project root with:
+   - `VITE_API_URL=http://localhost:8080`
+2. Restart `npm run dev` for the frontend.
+
+When `VITE_API_URL` is set, the app will:
+- Log in via the API (dealers)
+- Load and create customers via the API (shared across devices)
+- Fall back to localStorage if the API is not configured
+
+### Deploy API to Render
+1. Create a new Web Service on Render using the `/server` folder
+2. Add a Render PostgreSQL instance and set `DATABASE_URL`
+3. Set `JWT_SECRET`
+4. Build Command: `npm ci && npm run generate && npm run migrate && npm run build`
+5. Start Command: `npm start`
+6. In the Static Site (frontend) set `VITE_API_URL` to the API URL

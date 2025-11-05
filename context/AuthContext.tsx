@@ -68,6 +68,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setNeedsPasswordChange(false);
     api.setCurrentUser(null);
     localStorage.removeItem('unionRegistryUser');
+    localStorage.removeItem('ur:auth:token');
   };
 
   const updatePassword = async (newPassword: string) => {

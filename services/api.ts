@@ -7,6 +7,7 @@ import {
 } from './mockData';
 import { UserRole, Dealer, Employee, Customer, AuditLog, GlobalSearchResult, AuditActionType, User } from '../types';
 import { storage } from '../utils/storage';
+import { apiGet, apiPost, getApiBase } from './http';
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
@@ -70,6 +71,8 @@ const generateGlobalIndex = (): GlobalSearchResult[] => {
             ownerDealerName: dealer?.companyName || 'Unknown Dealer',
             statusSummary: cust.status,
             customerType: cust.type,
+            terminationDate: cust.terminationDate,
+            terminationReason: cust.terminationReason
         };
     });
 
@@ -92,24 +95,52 @@ export const api = {
     return { user: adminUser, temporaryPassword: !!adminUser.tempPassword };
   },
 
-  loginAsDealer: async (emailOrUsername: string, password: string) => {
-    await delay(500);
-    const loginIdentifier = emailOrUsername.toLowerCase();
-    const user = mockUsers.find(u => 
-        (u.email.toLowerCase() === loginIdentifier || u.username.toLowerCase() === loginIdentifier) 
-        && u.role === UserRole.DEALER
-    );
+    loginAsDealer: async (emailOrUsername: string, password: string) => {
+        // Try server API if configured
+        if (getApiBase()) {
+            try {
+                const data = await apiPost<{ token: string; dealer: { id: string; username: string; email: string; forcePasswordChange: boolean } }>(
+                    '/api/auth/login',
+                    { username: emailOrUsername, password }
+                );
+                localStorage.setItem('ur:auth:token', data.token);
+                const user: User = {
+                    id: data.dealer.id,
+                    email: data.dealer.email,
+                    username: data.dealer.username,
+                    name: data.dealer.username,
+                    role: UserRole.DEALER,
+                    dealerId: data.dealer.id,
+                    tempPassword: data.dealer.forcePasswordChange ? 'TEMP' : null,
+                    tempPasswordExpiry: null,
+                };
+                currentUser = user;
+                addAuditLog(AuditActionType.LOGIN, `User ${user.name} logged in (server).`);
+                return { user, temporaryPassword: data.dealer.forcePasswordChange };
+            } catch (e) {
+                // fall back to local if server login fails due to NO_API
+                const msg = (e as Error).message || '';
+                if (!msg.includes('NO_API')) throw e;
+            }
+        }
 
-    if (!user) throw new Error('User not found or invalid credentials.');
-    
-    const hasTempPassword = !!user.tempPassword;
-    if (hasTempPassword && password !== user.tempPassword) throw new Error('Invalid temporary password.');
-    if (!hasTempPassword && password !== 'password123') throw new Error('Invalid password.');
+        // Local fallback
+        await delay(500);
+        const loginIdentifier = emailOrUsername.toLowerCase();
+        const user = mockUsers.find(u => 
+                (u.email.toLowerCase() === loginIdentifier || u.username.toLowerCase() === loginIdentifier) 
+                && u.role === UserRole.DEALER
+        );
 
-    currentUser = user;
-    addAuditLog(AuditActionType.LOGIN, `User ${user.name} logged in.`);
-    return { user, temporaryPassword: hasTempPassword };
-  },
+        if (!user) throw new Error('User not found or invalid credentials.');
+        const hasTempPassword = !!user.tempPassword;
+        if (hasTempPassword && password !== user.tempPassword) throw new Error('Invalid temporary password.');
+        if (!hasTempPassword && password !== 'password123') throw new Error('Invalid password.');
+
+        currentUser = user;
+        addAuditLog(AuditActionType.LOGIN, `User ${user.name} logged in.`);
+        return { user, temporaryPassword: hasTempPassword };
+    },
   
   changePassword: async (userId: string, newPassword: string) => {
     await delay(500);
@@ -142,7 +173,7 @@ export const api = {
       return [...mockAuditLogs].filter(log => log.dealerId === dealerId);
   },
 
-  createDealer: async (dealerData: Omit<Dealer, 'id' | 'status' | 'createdAt'>, username: string) => {
+  createDealer: async (dealerData: Omit<Dealer, 'id' | 'status' | 'createdAt' | 'suspensionReason' | 'deletionReason' | 'deletionDate'>, username: string) => {
     await delay(500);
     if (mockUsers.some(u => u.username.toLowerCase() === username.toLowerCase())) {
         throw new Error(`Username "${username}" is already taken.`);
@@ -172,7 +203,7 @@ export const api = {
     return { dealer: newDealer, tempPassword };
   },
 
-  updateDealer: async (dealerId: string, data: Partial<Omit<Dealer, 'id' | 'status' | 'createdAt'>>) => {
+  updateDealer: async (dealerId: string, data: Partial<Omit<Dealer, 'id' | 'status' | 'createdAt' | 'suspensionReason' | 'deletionReason' | 'deletionDate'>>) => {
       await delay(500);
       const dealerIndex = mockDealers.findIndex(d => d.id === dealerId);
       if (dealerIndex !== -1) {
@@ -198,8 +229,75 @@ export const api = {
       throw new Error("User for dealer not found");
   },
 
+  suspendDealer: async (dealerId: string, reason: string): Promise<Dealer> => {
+      await delay(500);
+      const dealerIndex = mockDealers.findIndex(d => d.id === dealerId);
+      if (dealerIndex !== -1) {
+          if (mockDealers[dealerIndex].status === 'deleted') {
+              throw new Error("Cannot suspend a deleted dealer");
+          }
+          mockDealers[dealerIndex].status = 'suspended';
+          mockDealers[dealerIndex].suspensionReason = reason;
+          addAuditLog(AuditActionType.UPDATE_DEALER, `Suspended dealer ${mockDealers[dealerIndex].companyName}: ${reason}`);
+          persistData();
+          return mockDealers[dealerIndex];
+      }
+      throw new Error("Dealer not found");
+  },
+
+  activateDealer: async (dealerId: string): Promise<Dealer> => {
+      await delay(500);
+      const dealerIndex = mockDealers.findIndex(d => d.id === dealerId);
+      if (dealerIndex !== -1) {
+          if (mockDealers[dealerIndex].status === 'deleted') {
+              throw new Error("Cannot activate a deleted dealer");
+          }
+          mockDealers[dealerIndex].status = 'active';
+          mockDealers[dealerIndex].suspensionReason = undefined;
+          addAuditLog(AuditActionType.UPDATE_DEALER, `Activated dealer ${mockDealers[dealerIndex].companyName}`);
+          persistData();
+          return mockDealers[dealerIndex];
+      }
+      throw new Error("Dealer not found");
+  },
+
+  deleteDealer: async (dealerId: string, reason: string): Promise<Dealer> => {
+      await delay(500);
+      const dealerIndex = mockDealers.findIndex(d => d.id === dealerId);
+      if (dealerIndex !== -1) {
+          if (mockDealers[dealerIndex].status === 'deleted') {
+              throw new Error("Dealer is already deleted");
+          }
+          mockDealers[dealerIndex].status = 'deleted';
+          mockDealers[dealerIndex].deletionReason = reason;
+          mockDealers[dealerIndex].deletionDate = new Date().toISOString();
+          addAuditLog(AuditActionType.UPDATE_DEALER, `Deleted dealer ${mockDealers[dealerIndex].companyName}: ${reason}`);
+          persistData();
+          return mockDealers[dealerIndex];
+      }
+      throw new Error("Dealer not found");
+  },
+
   getEmployees: async (dealerId: string): Promise<Employee[]> => { await delay(300); return mockEmployees.filter(e => e.dealerId === dealerId); },
-  getCustomers: async (dealerId: string): Promise<Customer[]> => { await delay(300); return mockCustomers.filter(c => c.dealerId === dealerId); },
+  getCustomers: async (dealerId: string): Promise<Customer[]> => {
+      // Try server API first (dealerId comes from currentUser on server)
+      if (getApiBase() && localStorage.getItem('ur:auth:token')) {
+          try {
+              const remote = await apiGet<any[]>('/api/customers');
+              // Remote schema matches frontend Customer, except status enums casing
+              return remote.map(c => ({
+                  ...c,
+                  status: (c.status || 'ACTIVE').toLowerCase(),
+                  type: (c.type || 'PRIVATE').toLowerCase(),
+              })) as Customer[];
+          } catch (e) {
+              const msg = (e as Error).message || '';
+              if (!msg.includes('NO_API')) throw e;
+          }
+      }
+      await delay(300);
+      return mockCustomers.filter(c => c.dealerId === dealerId);
+  },
   
   createEmployee: async (dealerId: string, employeeData: Omit<Employee, 'id' | 'dealerId' | 'status'>): Promise<Employee> => {
       await delay(500);
@@ -249,6 +347,17 @@ export const api = {
   },
 
   createCustomer: async (dealerId: string, customerData: Omit<Customer, 'id' | 'dealerId' | 'status'>): Promise<Customer> => {
+      // Try server API first
+      if (getApiBase() && localStorage.getItem('ur:auth:token')) {
+          try {
+              const payload = { ...customerData, type: customerData.type.toUpperCase() };
+              const created = await apiPost<any>('/api/customers', payload);
+              return { ...created, status: created.status.toLowerCase(), type: created.type.toLowerCase() } as Customer;
+          } catch (e) {
+              const msg = (e as Error).message || '';
+              if (!msg.includes('NO_API')) throw e;
+          }
+      }
       await delay(500);
       // Check for duplicate official ID
       const duplicateOfficialId = mockCustomers.find(c => c.officialId === customerData.officialId);
@@ -281,12 +390,14 @@ export const api = {
       throw new Error("Customer not found");
   },
 
-  terminateCustomer: async (customerId: string): Promise<Customer> => {
+  terminateCustomer: async (customerId: string, reason: string, date: string): Promise<Customer> => {
       await delay(500);
       const index = mockCustomers.findIndex(c => c.id === customerId);
       if (index > -1) {
           mockCustomers[index].status = 'inactive';
-          addAuditLog(AuditActionType.UPDATE_CUSTOMER, `Deactivated customer ${mockCustomers[index].nameOrEntity}`);
+          mockCustomers[index].terminationReason = reason;
+          mockCustomers[index].terminationDate = date;
+          addAuditLog(AuditActionType.UPDATE_CUSTOMER, `Terminated customer ${mockCustomers[index].nameOrEntity}`);
           persistData();
           return mockCustomers[index];
       }

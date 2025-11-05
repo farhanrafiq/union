@@ -86,6 +86,31 @@ export const api = {
   },
 
   loginAsAdmin: async (password: string) => {
+    // Try server API if configured
+    if (getApiBase()) {
+      try {
+        const data = await apiPost<{ token: string; admin: { id: string; username: string; role: string } }>(
+          '/api/auth/admin/login',
+          { username: 'admin', password }
+        );
+        localStorage.setItem('ur:auth:token', data.token);
+        const user: User = {
+          id: data.admin.id,
+          email: 'admin@union.local',
+          username: data.admin.username,
+          name: 'Administrator',
+          role: UserRole.ADMIN,
+        };
+        currentUser = user;
+        addAuditLog(AuditActionType.LOGIN, "Admin logged in (server)");
+        return { user, temporaryPassword: false };
+      } catch (e) {
+        const msg = (e as Error).message || '';
+        if (!msg.includes('NO_API')) throw e;
+      }
+    }
+
+    // Local fallback
     await delay(500);
     if (password !== 'Union@2025') throw new Error('Invalid admin password.');
     const adminUser = mockUsers.find(u => u.role === UserRole.ADMIN);
@@ -177,14 +202,56 @@ export const api = {
       throw new Error("User not found");
   },
 
-  getDealers: async (): Promise<Dealer[]> => { await delay(300); return [...mockDealers].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()); },
-  getAuditLogs: async (): Promise<AuditLog[]> => { await delay(400); return [...mockAuditLogs]; },
+  getDealers: async (): Promise<Dealer[]> => {
+    // Try server API first
+    if (getApiBase() && localStorage.getItem('ur:auth:token')) {
+      try {
+        const remote = await apiGet<any[]>('/api/admin/dealers');
+        return remote.map(d => ({
+          ...d,
+          status: (d.status || 'ACTIVE').toLowerCase(),
+        })) as Dealer[];
+      } catch (e) {
+        const msg = (e as Error).message || '';
+        if (!msg.includes('NO_API')) throw e;
+      }
+    }
+    await delay(300);
+    return [...mockDealers].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  },
+
+  getAuditLogs: async (): Promise<AuditLog[]> => {
+    // Try server API first
+    if (getApiBase() && localStorage.getItem('ur:auth:token')) {
+      try {
+        return await apiGet<AuditLog[]>('/api/audit');
+      } catch (e) {
+        const msg = (e as Error).message || '';
+        if (!msg.includes('NO_API')) throw e;
+      }
+    }
+    await delay(400);
+    return [...mockAuditLogs];
+  },
   getDealerAuditLogs: async(dealerId: string): Promise<AuditLog[]> => {
       await delay(400);
       return [...mockAuditLogs].filter(log => log.dealerId === dealerId);
   },
 
   createDealer: async (dealerData: Omit<Dealer, 'id' | 'status' | 'createdAt' | 'suspensionReason' | 'deletionReason' | 'deletionDate'>, username: string) => {
+    // Try server API first
+    if (getApiBase() && localStorage.getItem('ur:auth:token')) {
+      try {
+        const payload = { ...dealerData, username };
+        const response = await apiPost<{ dealer: any; tempPassword: string }>('/api/admin/dealers', payload);
+        return { dealer: { ...response.dealer, status: response.dealer.status.toLowerCase() } as Dealer, tempPassword: response.tempPassword };
+      } catch (e) {
+        const msg = (e as Error).message || '';
+        if (!msg.includes('NO_API')) throw e;
+      }
+    }
+
+    // Local fallback
     await delay(500);
     if (mockUsers.some(u => u.username.toLowerCase() === username.toLowerCase())) {
         throw new Error(`Username "${username}" is already taken.`);
@@ -215,6 +282,17 @@ export const api = {
   },
 
   updateDealer: async (dealerId: string, data: Partial<Omit<Dealer, 'id' | 'status' | 'createdAt' | 'suspensionReason' | 'deletionReason' | 'deletionDate'>>) => {
+      // Try server API first
+      if (getApiBase() && localStorage.getItem('ur:auth:token')) {
+          try {
+              const updated = await apiPatch<any>(`/api/admin/dealers/${dealerId}`, data);
+              return { ...updated, status: updated.status.toLowerCase() } as Dealer;
+          } catch (e) {
+              const msg = (e as Error).message || '';
+              if (!msg.includes('NO_API')) throw e;
+          }
+      }
+
       await delay(500);
       const dealerIndex = mockDealers.findIndex(d => d.id === dealerId);
       if (dealerIndex !== -1) {
@@ -227,6 +305,17 @@ export const api = {
   },
 
   resetDealerPassword: async (dealerId: string): Promise<string> => {
+      // Try server API first
+      if (getApiBase() && localStorage.getItem('ur:auth:token')) {
+          try {
+              const response = await apiPost<{ tempPassword: string }>(`/api/admin/dealers/${dealerId}/reset-password`, {});
+              return response.tempPassword;
+          } catch (e) {
+              const msg = (e as Error).message || '';
+              if (!msg.includes('NO_API')) throw e;
+          }
+      }
+
       await delay(500);
       const user = mockUsers.find(u => u.dealerId === dealerId);
       if (user) {
@@ -241,6 +330,17 @@ export const api = {
   },
 
   suspendDealer: async (dealerId: string, reason: string): Promise<Dealer> => {
+      // Try server API first
+      if (getApiBase() && localStorage.getItem('ur:auth:token')) {
+          try {
+              const updated = await apiPost<any>(`/api/admin/dealers/${dealerId}/suspend`, { reason });
+              return { ...updated, status: updated.status.toLowerCase() } as Dealer;
+          } catch (e) {
+              const msg = (e as Error).message || '';
+              if (!msg.includes('NO_API')) throw e;
+          }
+      }
+
       await delay(500);
       const dealerIndex = mockDealers.findIndex(d => d.id === dealerId);
       if (dealerIndex !== -1) {
@@ -257,6 +357,17 @@ export const api = {
   },
 
   activateDealer: async (dealerId: string): Promise<Dealer> => {
+      // Try server API first
+      if (getApiBase() && localStorage.getItem('ur:auth:token')) {
+          try {
+              const updated = await apiPost<any>(`/api/admin/dealers/${dealerId}/activate`, {});
+              return { ...updated, status: updated.status.toLowerCase() } as Dealer;
+          } catch (e) {
+              const msg = (e as Error).message || '';
+              if (!msg.includes('NO_API')) throw e;
+          }
+      }
+
       await delay(500);
       const dealerIndex = mockDealers.findIndex(d => d.id === dealerId);
       if (dealerIndex !== -1) {
@@ -273,6 +384,17 @@ export const api = {
   },
 
   deleteDealer: async (dealerId: string, reason: string): Promise<Dealer> => {
+      // Try server API first
+      if (getApiBase() && localStorage.getItem('ur:auth:token')) {
+          try {
+              const updated = await apiPost<any>(`/api/admin/dealers/${dealerId}/delete`, { reason });
+              return { ...updated, status: updated.status.toLowerCase() } as Dealer;
+          } catch (e) {
+              const msg = (e as Error).message || '';
+              if (!msg.includes('NO_API')) throw e;
+          }
+      }
+
       await delay(500);
       const dealerIndex = mockDealers.findIndex(d => d.id === dealerId);
       if (dealerIndex !== -1) {
@@ -464,6 +586,21 @@ export const api = {
   },
   
   universalSearch: async (query: string): Promise<GlobalSearchResult[]> => {
+    // Try server API first
+    if (getApiBase() && localStorage.getItem('ur:auth:token')) {
+        try {
+            const results = await apiGet<any[]>(`/api/search?q=${encodeURIComponent(query)}`);
+            // Normalize status fields to lowercase
+            return results.map(r => ({
+                ...r,
+                dealerStatus: r.dealerStatus ? r.dealerStatus.toLowerCase() : 'active',
+            }));
+        } catch (e) {
+            const msg = (e as Error).message || '';
+            if (!msg.includes('NO_API')) throw e;
+        }
+    }
+
     await delay(700);
     const lowerQuery = query.toLowerCase().trim();
     if (!lowerQuery) return [];

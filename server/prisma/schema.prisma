@@ -87,3 +87,37 @@ model Employee {
 
   dealer Dealer @relation(fields: [dealerId], references: [id])
 }
+
+enum AuditActionType {
+  LOGIN
+  RESET_PASSWORD
+  CHANGE_PASSWORD
+  CREATE_DEALER
+  UPDATE_DEALER
+  SEARCH
+  CREATE_EMPLOYEE
+  UPDATE_EMPLOYEE
+  TERMINATE_EMPLOYEE
+  CREATE_CUSTOMER
+  UPDATE_CUSTOMER
+}
+
+model AuditLog {
+  id          String          @id @default(uuid())
+  userId      String
+  userName    String
+  dealerId    String?
+  actionType  AuditActionType
+  details     String
+  ipAddress   String?
+  timestamp   DateTime        @default(now())
+}
+
+model Admin {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}

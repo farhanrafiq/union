@@ -3,9 +3,24 @@ import { prisma } from '../db';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
+import { verifyAdminPassword, generateAdminToken } from '../middleware/adminAuth';
 
 const router = Router();
 const loginSchema = z.object({ username: z.string(), password: z.string() });
+
+// Admin login
+router.post('/admin/login', async (req: Request, res: Response) => {
+  const parse = loginSchema.safeParse(req.body);
+  if (!parse.success) return res.status(400).json({ error: 'Invalid credentials' });
+
+  const { password } = parse.data;
+  if (!verifyAdminPassword(password)) {
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
+
+  const token = generateAdminToken();
+  res.json({ token, admin: { id: 'admin-1', username: 'admin', role: 'admin' } });
+});
 
 router.post('/login', async (req: Request, res: Response) => {
   const parse = loginSchema.safeParse(req.body);

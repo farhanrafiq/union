@@ -58,32 +58,49 @@ The build will create a `dist` folder containing the optimized static files read
 
 By default, data is stored in the browser (localStorage), which is per-device. To share data across devices, use the included backend API (Express + Prisma + PostgreSQL) in the `server/` folder.
 
+### Quick Start with Neon (Recommended)
+
+Neon PostgreSQL is serverless and has a generous free tier. [Full deployment guide here](./DEPLOYMENT.md).
+
+**For production deployment**:
+1. Create free Neon DB at [neon.tech](https://neon.tech)
+2. Deploy backend to Render (see [DEPLOYMENT.md](./DEPLOYMENT.md))
+3. Deploy frontend to Render with `VITE_API_URL` set to your API
+4. Done! Data syncs across all devices.
+
 ### Run the API locally
-1. Create a Postgres database (Docker or any local instance)
+
+1. Create a Neon database or use local Postgres
 2. Create `server/.env` with:
-   - `DATABASE_URL=postgres://user:pass@host:5432/dbname`
+   - `DATABASE_URL=postgres://user:pass@host/dbname?sslmode=require`
    - `JWT_SECRET=a-long-random-string`
 3. From `server/` folder:
    - `npm install`
    - `npm run generate`
    - `npm run migrate`
-   - `npm run seed` (creates a demo dealer: dealer1 / Union@2025)
+   - `npm run seed` (creates demo dealer: dealer1 / Union@2025)
    - `npm run dev`
 
 ### Point the frontend at the API
+
 1. Create `.env.local` in the project root with:
    - `VITE_API_URL=http://localhost:8080`
 2. Restart `npm run dev` for the frontend.
 
 When `VITE_API_URL` is set, the app will:
 - Log in via the API (dealers)
-- Load and create customers via the API (shared across devices)
+- Load and create customers/employees via the API (shared across devices)
+- Send forgot-password emails (currently mocked to console)
 - Fall back to localStorage if the API is not configured
 
+### What syncs across devices
+
+When the API is configured:
+- ✅ Dealer authentication (JWT-based)
+- ✅ Customers (create, update, terminate)
+- ✅ Employees (create, update, terminate)
+- ✅ Password reset flows
+
 ### Deploy API to Render
-1. Create a new Web Service on Render using the `/server` folder
-2. Add a Render PostgreSQL instance and set `DATABASE_URL`
-3. Set `JWT_SECRET`
-4. Build Command: `npm ci && npm run generate && npm run migrate && npm run build`
-5. Start Command: `npm start`
-6. In the Static Site (frontend) set `VITE_API_URL` to the API URL
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for step-by-step instructions with Neon PostgreSQL.

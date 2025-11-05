@@ -23,4 +23,15 @@ export const apiPost = async <T>(path: string, body: any): Promise<T> => {
   return r.json();
 };
 
+export const apiPatch = async <T>(path: string, body: any): Promise<T> => {
+  if (!API_BASE) throw new Error('NO_API');
+  const r = await fetch(`${API_BASE}${path}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) throw new Error(await r.text());
+  return r.json();
+};
+
 export const getApiBase = () => API_BASE;

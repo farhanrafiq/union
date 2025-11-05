@@ -3,6 +3,7 @@ import { useAuth } from '../../hooks/useAuth';
 import Button from '../common/Button';
 import Input from '../common/Input';
 import Card from '../common/Card';
+import ForgotPasswordModal from './ForgotPasswordModal';
 
 interface DealerLoginPageProps {
     onBack: () => void;
@@ -15,6 +16,7 @@ const DealerLoginPage: React.FC<DealerLoginPageProps> = ({ onBack }) => {
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,9 +82,25 @@ const DealerLoginPage: React.FC<DealerLoginPageProps> = ({ onBack }) => {
                     Back
                 </Button>
             </div>
+
+            <div className="text-center mt-4">
+              <button
+                type="button"
+                onClick={() => setShowForgotPassword(true)}
+                className="text-sm text-blue-600 hover:text-blue-700 underline"
+                disabled={loading}
+              >
+                Forgot Password?
+              </button>
+            </div>
           </form>
         </Card>
       </div>
+
+      <ForgotPasswordModal
+        isOpen={showForgotPassword}
+        onClose={() => setShowForgotPassword(false)}
+      />
     </div>
   );
 };

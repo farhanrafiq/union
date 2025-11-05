@@ -7,7 +7,7 @@ import {
 } from './mockData';
 import { UserRole, Dealer, Employee, Customer, AuditLog, GlobalSearchResult, AuditActionType, User } from '../types';
 import { storage } from '../utils/storage';
-import { apiGet, apiPost, getApiBase } from './http';
+import { apiGet, apiPost, apiPatch, getApiBase } from './http';
 
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
@@ -143,6 +143,17 @@ export const api = {
     },
   
   changePassword: async (userId: string, newPassword: string) => {
+    // Try server API first
+    if (getApiBase() && localStorage.getItem('ur:auth:token')) {
+        try {
+            await apiPost('/api/auth/change-password', { newPassword });
+            // User's forcePasswordChange flag now cleared on server
+            return;
+        } catch (e) {
+            const msg = (e as Error).message || '';
+            if (!msg.includes('NO_API')) throw e;
+        }
+    }
     await delay(500);
     const user = mockUsers.find(u => u.id === userId);
     if (user) {
@@ -278,7 +289,24 @@ export const api = {
       throw new Error("Dealer not found");
   },
 
-  getEmployees: async (dealerId: string): Promise<Employee[]> => { await delay(300); return mockEmployees.filter(e => e.dealerId === dealerId); },
+  getEmployees: async (dealerId: string): Promise<Employee[]> => {
+      // Try server API first
+      if (getApiBase() && localStorage.getItem('ur:auth:token')) {
+          try {
+              const remote = await apiGet<any[]>('/api/employees');
+              return remote.map(e => ({
+                  ...e,
+                  status: (e.status || 'ACTIVE').toLowerCase(),
+                  hireDate: e.hireDate || new Date().toISOString().split('T')[0],
+              })) as Employee[];
+          } catch (e) {
+              const msg = (e as Error).message || '';
+              if (!msg.includes('NO_API')) throw e;
+          }
+      }
+      await delay(300);
+      return mockEmployees.filter(e => e.dealerId === dealerId);
+  },
   getCustomers: async (dealerId: string): Promise<Customer[]> => {
       // Try server API first (dealerId comes from currentUser on server)
       if (getApiBase() && localStorage.getItem('ur:auth:token')) {
@@ -300,6 +328,17 @@ export const api = {
   },
   
   createEmployee: async (dealerId: string, employeeData: Omit<Employee, 'id' | 'dealerId' | 'status'>): Promise<Employee> => {
+      // Try server API first
+      if (getApiBase() && localStorage.getItem('ur:auth:token')) {
+          try {
+              const payload = { ...employeeData, hireDate: employeeData.hireDate };
+              const created = await apiPost<any>('/api/employees', payload);
+              return { ...created, status: created.status.toLowerCase() } as Employee;
+          } catch (e) {
+              const msg = (e as Error).message || '';
+              if (!msg.includes('NO_API')) throw e;
+          }
+      }
       await delay(500);
       // Check for duplicate Aadhar number
       const duplicateAadhar = mockEmployees.find(e => e.aadhar === employeeData.aadhar);
@@ -314,6 +353,16 @@ export const api = {
   },
 
   updateEmployee: async(employeeId: string, data: Partial<Employee>): Promise<Employee> => {
+      // Try server API first
+      if (getApiBase() && localStorage.getItem('ur:auth:token')) {
+          try {
+              const updated = await apiPatch<any>(`/api/employees/${employeeId}`, data);
+              return { ...updated, status: updated.status.toLowerCase() } as Employee;
+          } catch (e) {
+              const msg = (e as Error).message || '';
+              if (!msg.includes('NO_API')) throw e;
+          }
+      }
       await delay(500);
       const index = mockEmployees.findIndex(e => e.id === employeeId);
       if (index > -1) {
@@ -333,6 +382,16 @@ export const api = {
   },
 
   terminateEmployee: async (employeeId: string, reason: string, date: string): Promise<Employee> => {
+      // Try server API first
+      if (getApiBase() && localStorage.getItem('ur:auth:token')) {
+          try {
+              const updated = await apiPost<any>(`/api/employees/${employeeId}/terminate`, { reason, date });
+              return { ...updated, status: updated.status.toLowerCase() } as Employee;
+          } catch (e) {
+              const msg = (e as Error).message || '';
+              if (!msg.includes('NO_API')) throw e;
+          }
+      }
       await delay(500);
       const index = mockEmployees.findIndex(e => e.id === employeeId);
       if (index > -1) {

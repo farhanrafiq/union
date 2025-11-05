@@ -8,99 +8,186 @@ This contains everything you need to run your app locally.
 
 View your app in AI Studio: https://ai.studio/apps/drive/11fGBCY5TvCYgSimd4g6-LNbc-4RrgIFG
 
-## Run Locally
+## Run Locally (Full Stack)
 
-**Prerequisites:**  Node.js
+### Frontend Only (localStorage mode)
+**Prerequisites:** Node.js
 
 1. Install dependencies:
    `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
+2. Run the app:
    `npm run dev`
+3. Data stored in browser only (not synced across devices)
 
-## Deploy to Render
+### With Backend API (Cross-device sync)
 
-This project is configured to deploy automatically to Render as a static site.
+**Prerequisites:** Node.js, PostgreSQL or Neon account
+
+1. **Setup Backend**:
+   ```bash
+   cd server
+   npm install
+   ```
+
+2. **Configure Database**:
+   - Create Neon database at [neon.tech](https://neon.tech) (free tier) OR use local PostgreSQL
+   - Copy `server/.env.example` to `server/.env`
+   - Set `DATABASE_URL` to your connection string
+   - Set `JWT_SECRET` (generate with: `openssl rand -hex 32`)
+
+3. **Initialize Database**:
+   ```bash
+   cd server
+   npm run generate  # Generate Prisma client
+   npm run migrate   # Run migrations
+   npm run seed      # Create demo data (dealer1 / Union@2025)
+   npm run dev       # Start backend on :8080
+   ```
+
+4. **Setup Frontend**:
+   ```bash
+   cd ..  # Back to project root
+   npm install
+   ```
+   - Copy `.env.example` to `.env.local`
+   - Set `VITE_API_URL=http://localhost:8080`
+
+5. **Run Frontend**:
+   ```bash
+   npm run dev  # Start frontend on :5173
+   ```
+
+6. **Test**: Open `http://localhost:5173` and login with `dealer1` / `Union@2025`
+
+### Local Testing Verification
+```bash
+# Verify backend is running
+curl http://localhost:8080/health
+# Should return: {"ok":true}
+
+# Verify frontend can connect
+# Login on browser 1, add employee
+# Open incognito/another browser, login with same dealer
+# Employee should appear (data synced via API)
+```
+
+## Deploy to Render (Full Stack with Cross-Device Sync)
+
+This project is configured for full-stack deployment with backend API + frontend.
 
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/farhanrafiq/union)
 
-### Option 1: Automatic Deployment (Recommended)
-1. Connect your GitHub repository to Render at https://dashboard.render.com/new/static-site or click the "Deploy to Render" button above
-2. Render will automatically detect the `render.yaml` configuration file
-3. Your app will be deployed with these settings:
-   - **Build Command**: `npm run build`
-   - **Publish Directory**: `dist`
-   - SPA rewrite to `index.html` is already configured in `render.yaml`
+### Quick Deploy (Recommended)
 
-### Option 2: Manual Configuration
-If you prefer to configure manually in the Render dashboard:
-1. Create a new Static Site on Render
-2. Connect your GitHub repository
-3. Set the following build settings:
-   - **Build Command**: `npm run build`
-   - **Publish Directory**: `dist`
-   - (Optional) Add environment variable `GEMINI_API_KEY` if your app uses it
+1. **Create Neon Database** (Free Tier):
+   - Sign up at [neon.tech](https://neon.tech)
+   - Create a new project
+   - Copy the connection string (format: `postgresql://user:pass@host.neon.tech/dbname?sslmode=require`)
 
-### Environment variables
-- Local development: create a `.env.local` file with `GEMINI_API_KEY=...` if needed.
-- Render: the `render.yaml` includes an env var placeholder for `GEMINI_API_KEY` with `sync: false`. Set its value in the Render dashboard (Static Site -> Environment -> Add Environment Variable) so it's available at build time.
+2. **Deploy to Render**:
+   - Click "Deploy to Render" button above OR connect repo at [dashboard.render.com](https://dashboard.render.com)
+   - Render will detect `render.yaml` and create:
+     - **Backend API** (Web Service): Node.js + Express + Prisma
+     - **Frontend** (Static Site): React + Vite
+   - Set environment variables in Render dashboard:
+     - Backend: `DATABASE_URL` (your Neon connection string)
+     - Frontend: `VITE_API_URL` (auto-linked to backend URL)
 
-### Build Verification
-To verify your build works locally before deploying:
-```bash
-npm run build
-npm run preview
+3. **Initialize Database**:
+   ```bash
+   # After backend is deployed, run migrations via Render Shell:
+   npm run migrate
+   npm run seed
+   ```
+
+4. **Done!** Your app now syncs data across all devices.
+
+### What Gets Deployed
+
+**Backend API** (`union-registry-api`):
+- Express server with authentication (JWT)
+- Prisma ORM connected to Neon PostgreSQL
+- Endpoints: /api/auth, /api/customers, /api/employees, /api/admin, /api/audit, /api/search
+
+**Frontend** (`union-registry-frontend`):
+- React + Vite SPA
+- Automatically configured to use backend API
+- Falls back to localStorage if API unavailable
+
+### Environment Variables Setup
+
+**Backend (Web Service)**:
+```
+DATABASE_URL=postgresql://user:pass@host.neon.tech/dbname?sslmode=require
+JWT_SECRET=<auto-generated by Render>
+NODE_ENV=production
 ```
 
-The build will create a `dist` folder containing the optimized static files ready for deployment.
+**Frontend (Static Site)**:
+```
+VITE_API_URL=<auto-linked to backend URL>
+```
+
+### Manual Configuration (Alternative)
+
+If not using the Deploy button:
+
+1. **Backend Web Service**:
+   - Root Directory: `server`
+   - Build Command: `npm ci && npm run generate && npm run build`
+   - Start Command: `npm start`
+   - Add environment variables listed above
+
+2. **Frontend Static Site**:
+   - Root Directory: `.` (project root)
+   - Build Command: `npm ci && npm run build`
+   - Publish Directory: `dist`
+   - Add `VITE_API_URL` pointing to backend
+
+### Verification
+
+After deployment:
+1. Frontend URL: `https://union-registry-frontend.onrender.com`
+2. Backend API: `https://union-registry-api.onrender.com/health` (should return `{"ok":true}`)
+3. Test cross-device: Login on device 1, add data, login on device 2 → data appears ✅
+
+For detailed troubleshooting, see [DEPLOYMENT.md](./DEPLOYMENT.md).
 
 ## Optional: Shared data across devices (Backend API)
 
-By default, data is stored in the browser (localStorage), which is per-device. To share data across devices, use the included backend API (Express + Prisma + PostgreSQL) in the `server/` folder.
+By default, data is stored in the browser (localStorage), which is per-device. To share data across devices, the included backend API (Express + Prisma + PostgreSQL) in the `server/` folder is ready to deploy.
 
-### Quick Start with Neon (Recommended)
+**Local development**: See "Run Locally (Full Stack)" section above
 
-Neon PostgreSQL is serverless and has a generous free tier. [Full deployment guide here](./DEPLOYMENT.md).
+**Production deployment**: See "Deploy to Render (Full Stack with Cross-Device Sync)" section above
 
-**For production deployment**:
-1. Create free Neon DB at [neon.tech](https://neon.tech)
-2. Deploy backend to Render (see [DEPLOYMENT.md](./DEPLOYMENT.md))
-3. Deploy frontend to Render with `VITE_API_URL` set to your API
-4. Done! Data syncs across all devices.
+**Detailed deployment guide**: [DEPLOYMENT.md](./DEPLOYMENT.md) has step-by-step instructions with screenshots.
 
-### Run the API locally
+### What syncs across devices (when API is configured)
 
-1. Create a Neon database or use local Postgres
-2. Create `server/.env` with:
-   - `DATABASE_URL=postgres://user:pass@host/dbname?sslmode=require`
-   - `JWT_SECRET=a-long-random-string`
-3. From `server/` folder:
-   - `npm install`
-   - `npm run generate`
-   - `npm run migrate`
-   - `npm run seed` (creates demo dealer: dealer1 / Union@2025)
-   - `npm run dev`
+- ✅ **Admin Panel**: Dealer management, audit logs, global search
+- ✅ **Dealer Authentication**: JWT-based login with password reset
+- ✅ **Customers**: Create, update, terminate (shared across all dealer logins)
+- ✅ **Employees**: Create, update, terminate with Aadhar uniqueness check
+- ✅ **Cross-device real-time**: Add data on phone → immediately visible on laptop
+- ✅ **Audit trails**: All admin actions logged with timestamps
 
-### Point the frontend at the API
+### Features
 
-1. Create `.env.local` in the project root with:
-   - `VITE_API_URL=http://localhost:8080`
-2. Restart `npm run dev` for the frontend.
+- **Admin Dashboard**: Manage dealers, view audit logs, global search
+- **Dealer Portal**: Manage customers and employees
+- **Authentication**: Secure JWT-based auth with role separation (admin vs dealer)
+- **Validation**: Phone numbers (10 digits), Aadhar uniqueness with conflict details
+- **Responsive**: Works on desktop, tablet, and mobile
+- **Offline-ready**: Falls back to localStorage if API unavailable
 
-When `VITE_API_URL` is set, the app will:
-- Log in via the API (dealers)
-- Load and create customers/employees via the API (shared across devices)
-- Send forgot-password emails (currently mocked to console)
-- Fall back to localStorage if the API is not configured
+## Technology Stack
 
-### What syncs across devices
+- **Frontend**: React 19, TypeScript, Vite, Tailwind CSS
+- **Backend**: Express 4, Prisma ORM, JWT authentication
+- **Database**: PostgreSQL (Neon serverless recommended)
+- **Deployment**: Render (Web Service + Static Site)
 
-When the API is configured:
-- ✅ Dealer authentication (JWT-based)
-- ✅ Customers (create, update, terminate)
-- ✅ Employees (create, update, terminate)
-- ✅ Password reset flows
+## Support
 
-### Deploy API to Render
-
-See [DEPLOYMENT.md](./DEPLOYMENT.md) for step-by-step instructions with Neon PostgreSQL.
+For deployment issues or questions, see [DEPLOYMENT.md](./DEPLOYMENT.md) or open an issue on GitHub.

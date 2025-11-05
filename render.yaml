@@ -1,11 +1,30 @@
 services:
+  # Backend API (Express + Prisma + PostgreSQL)
+  - type: web
+    name: union-registry-api
+    runtime: node
+    rootDir: server
+    buildCommand: npm ci && npm run generate && npm run build
+    startCommand: npm start
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: NODE_ENV
+        value: production
+
+  # Frontend Static Site (React + Vite)
   - type: static_site
-    name: union-registry-static
-    buildCommand: npm run build
+    name: union-registry-frontend
+    buildCommand: npm ci && npm run build
     staticPublishPath: dist
     envVars:
-      - key: GEMINI_API_KEY
-        sync: false
+      - key: VITE_API_URL
+        fromService:
+          name: union-registry-api
+          type: web
+          property: url
     routes:
       - type: rewrite
         source: /*

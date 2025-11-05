@@ -15,7 +15,7 @@ router.get('/', async (req: any, res: Response) => {
 const createSchema = z.object({
   firstName: z.string().min(1),
   lastName: z.string().min(1),
-  phone: z.string().min(6),
+  phone: z.string().length(10, 'Phone must be exactly 10 digits'),
   email: z.string().email(),
   aadhar: z.string().min(6),
   position: z.string().min(1),
@@ -27,20 +27,26 @@ router.post('/', async (req: any, res: Response) => {
   const parse = createSchema.safeParse(req.body);
   if (!parse.success) return res.status(400).json({ error: 'Invalid payload' });
 
-  // aadhar unique globally by schema; catch duplicate
-  try {
-    const emp = await prisma.employee.create({ data: { dealerId, ...parse.data } });
-    res.status(201).json(emp);
-  } catch (e: any) {
-    if (e?.code === 'P2002') return res.status(409).json({ error: 'Employee with this Aadhar already exists' });
-    throw e;
+  // Check if Aadhar already exists and get dealer info
+  const existingEmployee = await prisma.employee.findUnique({
+    where: { aadhar: parse.data.aadhar },
+    include: { dealer: { select: { companyName: true, username: true } } }
+  });
+
+  if (existingEmployee) {
+    return res.status(409).json({
+      error: `Employee with this Aadhar already exists at ${existingEmployee.dealer.companyName} (${existingEmployee.dealer.username})`
+    });
   }
+
+  const emp = await prisma.employee.create({ data: { dealerId, ...parse.data } });
+  res.status(201).json(emp);
 });
 
 const updateSchema = z.object({
   firstName: z.string().min(1).optional(),
   lastName: z.string().min(1).optional(),
-  phone: z.string().min(6).optional(),
+  phone: z.string().length(10, 'Phone must be exactly 10 digits').optional(),
   email: z.string().email().optional(),
   aadhar: z.string().min(6).optional(),
   position: z.string().min(1).optional(),
@@ -52,6 +58,20 @@ router.patch('/:id', async (req: any, res: Response) => {
   const parse = updateSchema.safeParse(req.body);
   if (!parse.success) return res.status(400).json({ error: 'Invalid payload' });
 
+  // If Aadhar is being updated, check for conflicts
+  if (parse.data.aadhar) {
+    const existingEmployee = await prisma.employee.findUnique({
+      where: { aadhar: parse.data.aadhar },
+      include: { dealer: { select: { companyName: true, username: true } } }
+    });
+
+    if (existingEmployee && existingEmployee.id !== id) {
+      return res.status(409).json({
+        error: `Employee with this Aadhar already exists at ${existingEmployee.dealer.companyName} (${existingEmployee.dealer.username})`
+      });
+    }
+  }
+
   try {
     const updated = await prisma.employee.update({
       where: { id },
@@ -60,7 +80,6 @@ router.patch('/:id', async (req: any, res: Response) => {
     if (updated.dealerId !== dealerId) return res.status(403).json({ error: 'Forbidden' });
     res.json(updated);
   } catch (e: any) {
-    if (e?.code === 'P2002') return res.status(409).json({ error: 'Employee with this Aadhar already exists' });
     return res.status(404).json({ error: 'Employee not found' });
   }
 });

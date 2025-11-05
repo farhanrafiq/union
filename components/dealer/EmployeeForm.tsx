@@ -39,6 +39,16 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ employee, onSave }) => {
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
+        
+        // Restrict phone to 10 digits only
+        if (name === 'phone') {
+            const digitsOnly = value.replace(/\D/g, '');
+            if (digitsOnly.length <= 10) {
+                setFormData(prev => ({ ...prev, [name]: digitsOnly }));
+            }
+            return;
+        }
+        
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
@@ -47,6 +57,13 @@ const EmployeeForm: React.FC<EmployeeFormProps> = ({ employee, onSave }) => {
         if (!user?.dealerId) return;
         
         setError('');
+        
+        // Validate phone is exactly 10 digits
+        if (formData.phone.length !== 10) {
+            setError('Phone number must be exactly 10 digits');
+            return;
+        }
+        
         try {
             const submissionData = { ...formData };
 

@@ -16,7 +16,7 @@ const createSchema = z.object({
   type: z.enum(['PRIVATE','GOVERNMENT']),
   nameOrEntity: z.string().min(2),
   contactPerson: z.string().optional(),
-  phone: z.string().min(6),
+  phone: z.string().length(10, 'Phone must be exactly 10 digits'),
   email: z.string().email(),
   officialId: z.string().min(4),
   address: z.string().min(3)

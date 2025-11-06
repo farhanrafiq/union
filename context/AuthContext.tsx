@@ -1,6 +1,5 @@
-
 import React, { createContext, useState, ReactNode, useEffect } from 'react';
-import { User } from '../types';
+import { User, UserRole } from '../types';
 import { api } from '../services/api';
 
 export interface AuthContextType {
@@ -24,17 +23,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     const checkPersistedUser = async () => {
       try {
-        const persistedUser = localStorage.getItem('unionRegistryUser');
-        if (persistedUser) {
-          const userData: User = JSON.parse(persistedUser);
-          // In a real app, you'd re-validate the token/session here
-          api.setCurrentUser(userData); // Sync API service with current user
+        const token = localStorage.getItem('ur:auth:token');
+        const dealerData = localStorage.getItem('ur:auth:dealer');
+        
+        if (token && dealerData) {
+          const dealer = JSON.parse(dealerData);
+          // Reconstruct minimal user object from dealer data
+          const userData: User = {
+            id: dealer.id,
+            username: dealer.username,
+            name: dealer.companyName,
+            email: dealer.email,
+            role: UserRole.DEALER,
+            dealerId: dealer.id,
+            tempPassword: null,
+            tempPasswordExpiry: null,
+          };
           setUser(userData);
-          setNeedsPasswordChange(!!userData.tempPassword);
+          setNeedsPasswordChange(false);
         }
       } catch (error) {
-        console.error("Failed to parse persisted user:", error);
-        localStorage.removeItem('unionRegistryUser');
+        console.error("Failed to restore session:", error);
+        localStorage.removeItem('ur:auth:token');
+        localStorage.removeItem('ur:auth:dealer');
       } finally {
         setLoading(false);
       }
@@ -42,54 +53,59 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     checkPersistedUser();
   }, []);
 
-  const handleLoginSuccess = (loggedInUser: User, temporary: boolean, rememberMe: boolean) => {
+  const handleLoginSuccess = (loggedInUser: User, temporary: boolean) => {
     setUser(loggedInUser);
     setNeedsPasswordChange(temporary);
-    api.setCurrentUser(loggedInUser);
-    if (rememberMe) {
-      localStorage.setItem('unionRegistryUser', JSON.stringify(loggedInUser));
-    } else {
-      localStorage.removeItem('unionRegistryUser');
-    }
   };
   
   const dealerLogin = async (emailOrUsername: string, password: string, rememberMe: boolean) => {
-    const { user, temporaryPassword } = await api.loginAsDealer(emailOrUsername, password);
-    handleLoginSuccess(user, temporaryPassword, rememberMe);
+    const dealer = await api.loginAsDealer(emailOrUsername, password);
+    const userData: User = {
+      id: dealer.id,
+      username: dealer.username,
+      name: dealer.companyName,
+      email: dealer.email,
+      role: UserRole.DEALER,
+      dealerId: dealer.id,
+      tempPassword: null,
+      tempPasswordExpiry: null,
+    };
+    handleLoginSuccess(userData, false);
   };
 
   const adminLogin = async (password: string, rememberMe: boolean) => {
-    const { user, temporaryPassword } = await api.loginAsAdmin(password);
-    handleLoginSuccess(user, temporaryPassword, rememberMe);
+    await api.loginAsAdmin(password);
+    const adminUser: User = {
+      id: 'admin',
+      username: 'admin',
+      name: 'Administrator',
+      email: 'admin@union.com',
+      role: UserRole.ADMIN,
+      dealerId: null,
+      tempPassword: null,
+      tempPasswordExpiry: null,
+    };
+    handleLoginSuccess(adminUser, false);
   };
 
   const logout = () => {
     setUser(null);
     setNeedsPasswordChange(false);
-    api.setCurrentUser(null);
-    localStorage.removeItem('unionRegistryUser');
     localStorage.removeItem('ur:auth:token');
+    localStorage.removeItem('ur:auth:dealer');
   };
 
   const updatePassword = async (newPassword: string) => {
     if (!user) throw new Error("No user is logged in.");
-    await api.changePassword(user.id, newPassword);
-    const updatedUser = { ...user, tempPassword: null, tempPasswordExpiry: null };
-    setUser(updatedUser);
-    if (localStorage.getItem('unionRegistryUser')) {
-        localStorage.setItem('unionRegistryUser', JSON.stringify(updatedUser));
-    }
+    await api.changePassword(user.tempPassword || '', newPassword);
     setNeedsPasswordChange(false);
   };
 
   const updateUser = (updatedData: Partial<User>) => {
-      if (user) {
-          const updatedUser = { ...user, ...updatedData };
-          setUser(updatedUser);
-          if (localStorage.getItem('unionRegistryUser')) {
-              localStorage.setItem('unionRegistryUser', JSON.stringify(updatedUser));
-          }
-      }
+    if (user) {
+      const updatedUser = { ...user, ...updatedData };
+      setUser(updatedUser);
+    }
   };
   
   const value = {

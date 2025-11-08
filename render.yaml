@@ -13,6 +13,11 @@ services:
         generateValue: true
       - key: NODE_ENV
         value: production
+      - key: FRONTEND_ORIGIN
+        fromService:
+          name: union-registry-frontend
+          type: static_site
+          property: url
 
   # Frontend Static Site (React + Vite)
   - type: static_site

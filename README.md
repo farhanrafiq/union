@@ -1,193 +1,193 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Union Employee Registry
 
-# Run and deploy your AI Studio app
+A full-stack application for managing dealer employees and customers with admin oversight.
 
-This contains everything you need to run your app locally.
+## 🚀 Quick Deploy to Render
 
-View your app in AI Studio: https://ai.studio/apps/drive/11fGBCY5TvCYgSimd4g6-LNbc-4RrgIFG
+This app is designed to run on **Render** with **Neon PostgreSQL**. No localhost setup needed!
 
-## Run Locally (Full Stack)
+### Prerequisites
+1. **Neon Database**: Create free PostgreSQL database at [neon.tech](https://neon.tech)
+2. **Render Account**: Sign up at [render.com](https://render.com)
+3. **GitHub**: Push this repo to your GitHub account
 
-### Frontend Only (localStorage mode)
-**Prerequisites:** Node.js
+### Deploy Steps
 
-1. Install dependencies:
-   `npm install`
-2. Run the app:
-   `npm run dev`
-3. Data stored in browser only (not synced across devices)
+1. **Create Neon Database**
+   - Go to [neon.tech](https://neon.tech) and create a free project
+   - Copy your connection string (starts with `postgresql://`)
 
-### With Backend API (Cross-device sync)
+2. **Deploy to Render**
+   - Go to [Render Dashboard](https://dashboard.render.com)
+   - Click **New** → **Blueprint**
+   - Connect your GitHub repository
+   - Render will detect `render.yaml` and create both services:
+     - Backend API (Node.js web service)
+     - Frontend (Static site)
 
-**Prerequisites:** Node.js, PostgreSQL or Neon account
+3. **Set Database URL**
+   - In Render, go to your **Backend API** service
+   - Go to **Environment** tab
+   - Find `DATABASE_URL` and paste your Neon connection string
+   - Click **Save Changes**
 
-1. **Setup Backend**:
-   ```bash
-   cd server
-   npm install
-   ```
+4. **Done!** 
+   - Render will automatically deploy both services
+   - Frontend will auto-connect to backend
+   - Database migrations run automatically
+   - `FRONTEND_ORIGIN` and `VITE_API_URL` are auto-configured
 
-2. **Configure Database**:
-   - Create Neon database at [neon.tech](https://neon.tech) (free tier) OR use local PostgreSQL
-   - Copy `server/.env.example` to `server/.env`
-   - Set `DATABASE_URL` to your connection string
-   - Set `JWT_SECRET` (generate with: `openssl rand -hex 32`)
+Your app will be live at: `https://union-registry-frontend.onrender.com`
 
-3. **Initialize Database**:
-   ```bash
-   cd server
-   npm run generate  # Generate Prisma client
-   npm run migrate   # Run migrations
-   npm run seed      # Create demo data (dealer1 / Union@2025)
-   npm run dev       # Start backend on :8080
-   ```
+---
 
-4. **Setup Frontend**:
-   ```bash
-   cd ..  # Back to project root
-   npm install
-   ```
-   - Copy `.env.example` to `.env.local`
-   - Set `VITE_API_URL=http://localhost:8080`
+## 🔧 Local Development (Optional)
 
-5. **Run Frontend**:
-   ```bash
-   npm run dev  # Start frontend on :5173
-   ```
+If you want to develop locally:
 
-6. **Test**: Open `http://localhost:5173` and login with `dealer1` / `Union@2025`
-
-### Local Testing Verification
+### Backend
 ```bash
-# Verify backend is running
-curl http://localhost:8080/health
-# Should return: {"ok":true}
+cd server
 
-# Verify frontend can connect
-# Login on browser 1, add employee
-# Open incognito/another browser, login with same dealer
-# Employee should appear (data synced via API)
+
+---
+
+## 🏗️ Architecture
+
+- **Frontend**: React + TypeScript + Vite + Tailwind CSS
+- **Backend**: Express + Prisma + PostgreSQL
+- **Database**: Neon PostgreSQL (serverless)
+- **Auth**: JWT with HttpOnly cookies
+- **Deployment**: Render (auto-deploy from GitHub)
+
+## 📚 Features
+
+### Admin Dashboard
+- Manage dealers (create, suspend, activate, delete)
+- View all employees and customers across dealers
+- Audit log of all actions
+- Reset dealer passwords
+
+### Dealer Dashboard
+- Manage employees (add, update, terminate)
+- Manage customers (add, update, terminate)
+- Universal search across all records
+- Profile management
+
+### Security
+- Role-based access control (Admin/Dealer)
+- JWT authentication with HttpOnly cookies
+- Password hashing with bcrypt
+- Force password change on first login/reset
+- Audit logging for compliance
+
+## 📖 Documentation
+
+- [DEPLOYMENT.md](./DEPLOYMENT.md) - Detailed deployment instructions
+- [SETUP.md](./SETUP.md) - Local development setup
+- [QUICKSTART.md](./QUICKSTART.md) - Quick start guide
+
+## 🔐 Default Credentials
+
+After seeding the database:
+
+**Admin**
+- Username: `admin`
+- Password: Check admin password in server logs or seed file
+
+**Demo Dealer**
+- Username: `dealer1`
+- Password: `Union@2025`
+
+⚠️ **Change these in production!**
+
+## 🛠️ Tech Stack
+
+### Frontend
+- React 18
+- TypeScript
+- Vite
+- Tailwind CSS
+- Fetch API (with credentials)
+
+### Backend
+- Node.js + Express
+- Prisma ORM
+- PostgreSQL (Neon)
+- JWT + bcrypt
+- Zod validation
+- Cookie-parser
+
+### Infrastructure
+- Render (hosting)
+- Neon (database)
+- GitHub (source control)
+
+## 📝 Environment Variables
+
+### Backend (Render)
 ```
-
-## Deploy to Render (Full Stack with Cross-Device Sync)
-
-This project is configured for full-stack deployment with backend API + frontend.
-
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/farhanrafiq/union)
-
-### Quick Deploy (Recommended)
-
-1. **Create Neon Database** (Free Tier):
-   - Sign up at [neon.tech](https://neon.tech)
-   - Create a new project
-   - Copy the connection string (format: `postgresql://user:pass@host.neon.tech/dbname?sslmode=require`)
-
-2. **Deploy to Render**:
-   - Click "Deploy to Render" button above OR connect repo at [dashboard.render.com](https://dashboard.render.com)
-   - Render will detect `render.yaml` and create:
-     - **Backend API** (Web Service): Node.js + Express + Prisma
-     - **Frontend** (Static Site): React + Vite
-   - Set environment variables in Render dashboard:
-     - Backend: `DATABASE_URL` (your Neon connection string)
-     - Frontend: `VITE_API_URL` (auto-linked to backend URL)
-
-3. **Initialize Database**:
-   ```bash
-   # After backend is deployed, run migrations via Render Shell:
-   npm run migrate
-   npm run seed
-   ```
-
-4. **Done!** Your app now syncs data across all devices.
-
-### What Gets Deployed
-
-**Backend API** (`union-registry-api`):
-- Express server with authentication (JWT)
-- Prisma ORM connected to Neon PostgreSQL
-- Endpoints: /api/auth, /api/customers, /api/employees, /api/admin, /api/audit, /api/search
-
-**Frontend** (`union-registry-frontend`):
-- React + Vite SPA
-- Automatically configured to use backend API
-- Falls back to localStorage if API unavailable
-
-### Environment Variables Setup
-
-**Backend (Web Service)**:
-```
-DATABASE_URL=postgresql://user:pass@host.neon.tech/dbname?sslmode=require
-JWT_SECRET=<auto-generated by Render>
+DATABASE_URL=postgresql://...  # Your Neon connection string
+JWT_SECRET=auto-generated      # Auto-generated by Render
 NODE_ENV=production
+FRONTEND_ORIGIN=auto-linked    # Auto-linked from frontend service
 ```
 
-**Frontend (Static Site)**:
+### Frontend (Render)
 ```
-VITE_API_URL=<auto-linked to backend URL>
+VITE_API_URL=auto-linked       # Auto-linked from backend service
 ```
 
-### Manual Configuration (Alternative)
+All environment variables are configured in `render.yaml` and auto-populated by Render Blueprint deployment.
 
-If not using the Deploy button:
+## 🚨 Troubleshooting
 
-1. **Backend Web Service**:
-   - Root Directory: `server`
-   - Build Command: `npm ci && npm run generate && npm run build`
-   - Start Command: `npm start`
-   - Add environment variables listed above
+### "API not configured" error
+- Make sure both services are deployed on Render via Blueprint
+- Check that `VITE_API_URL` is set in frontend environment
+- Verify backend service is running (check logs)
+- Redeploy frontend with "Clear build cache & deploy"
 
-2. **Frontend Static Site**:
-   - Root Directory: `.` (project root)
-   - Build Command: `npm ci && npm run build`
-   - Publish Directory: `dist`
-   - Add `VITE_API_URL` pointing to backend
+### Database connection errors
+- Verify `DATABASE_URL` is correct in backend environment
+- Check Neon database is active (it may sleep after inactivity on free tier)
+- Run migrations: Render does this automatically on deploy
+- Check Neon connection limits (10 concurrent on free tier)
 
-### Verification
+### CORS errors
+- `FRONTEND_ORIGIN` should be auto-set to your frontend URL
+- Check backend logs for CORS configuration
+- Verify credentials are included in fetch requests (already implemented)
+- Ensure both services are deployed via Blueprint
 
-After deployment:
-1. Frontend URL: `https://union-registry-frontend.onrender.com`
-2. Backend API: `https://union-registry-api.onrender.com/health` (should return `{"ok":true}`)
-3. Test cross-device: Login on device 1, add data, login on device 2 → data appears ✅
+### Session not persisting
+- Browser cookies must be enabled
+- Check Network tab → Response Headers for `Set-Cookie`
+- Verify `credentials: 'include'` in fetch requests (already implemented)
+- Check CORS configuration allows credentials
 
-For detailed troubleshooting, see [DEPLOYMENT.md](./DEPLOYMENT.md).
+## 📄 License
 
-## Optional: Shared data across devices (Backend API)
+MIT
 
-By default, data is stored in the browser (localStorage), which is per-device. To share data across devices, the included backend API (Express + Prisma + PostgreSQL) in the `server/` folder is ready to deploy.
+## 👤 Author
 
-**Local development**: See "Run Locally (Full Stack)" section above
+Farhan Rafiq
 
-**Production deployment**: See "Deploy to Render (Full Stack with Cross-Device Sync)" section above
+## 🙏 Support
 
-**Detailed deployment guide**: [DEPLOYMENT.md](./DEPLOYMENT.md) has step-by-step instructions with screenshots.
+For issues or questions, please open an issue on GitHub.
 
-### What syncs across devices (when API is configured)
+---
 
-- ✅ **Admin Panel**: Dealer management, audit logs, global search
-- ✅ **Dealer Authentication**: JWT-based login with password reset
-- ✅ **Customers**: Create, update, terminate (shared across all dealer logins)
-- ✅ **Employees**: Create, update, terminate with Aadhar uniqueness check
-- ✅ **Cross-device real-time**: Add data on phone → immediately visible on laptop
-- ✅ **Audit trails**: All admin actions logged with timestamps
+## 🔄 Updating Your Deployment
 
-### Features
+After making code changes:
 
-- **Admin Dashboard**: Manage dealers, view audit logs, global search
-- **Dealer Portal**: Manage customers and employees
-- **Authentication**: Secure JWT-based auth with role separation (admin vs dealer)
-- **Validation**: Phone numbers (10 digits), Aadhar uniqueness with conflict details
-- **Responsive**: Works on desktop, tablet, and mobile
-- **Offline-ready**: Falls back to localStorage if API unavailable
+```bash
+git add .
+git commit -m "Your changes"
+git push origin main
+```
 
-## Technology Stack
-
-- **Frontend**: React 19, TypeScript, Vite, Tailwind CSS
-- **Backend**: Express 4, Prisma ORM, JWT authentication
-- **Database**: PostgreSQL (Neon serverless recommended)
-- **Deployment**: Render (Web Service + Static Site)
-
-## Support
-
-For deployment issues or questions, see [DEPLOYMENT.md](./DEPLOYMENT.md) or open an issue on GitHub.
+Render will automatically detect the push and redeploy both services.

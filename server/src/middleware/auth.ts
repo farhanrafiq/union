@@ -8,7 +8,11 @@ export interface AuthToken {
 
 export const requireAuth = (req: Request, res: Response, next: NextFunction) => {
   const header = req.headers.authorization || '';
-  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+  const headerToken = header.startsWith('Bearer ') ? header.slice(7) : null;
+  // cookie-parser populates req.cookies
+  const cookieToken = (req as any).cookies?.token as string | undefined;
+
+  const token = headerToken || cookieToken;
   if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
   try {

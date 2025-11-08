@@ -6,16 +6,22 @@ import type { Dealer, Employee, Customer, AuditLog } from '../types';
 // ============================================
 
 export const loginAsAdmin = async (password: string) => {
-  const result = await apiPost<{ token: string; admin: any }>('/api/auth/admin/login', { password });
-  localStorage.setItem('ur:auth:token', result.token);
+  const result = await apiPost<{ admin: any }>('/api/auth/admin/login', { password });
   return result.admin;
 };
 
 export const loginAsDealer = async (username: string, password: string) => {
-  const result = await apiPost<{ token: string; dealer: any }>('/api/auth/login', { username, password });
-  localStorage.setItem('ur:auth:token', result.token);
-  localStorage.setItem('ur:auth:dealer', JSON.stringify(result.dealer));
+  const result = await apiPost<{ dealer: any }>('/api/auth/login', { username, password });
   return result.dealer;
+};
+
+export const getCurrentUser = async () => {
+  const result = await apiGet<{ user: any }>('/api/auth/me');
+  return result.user || null;
+};
+
+export const logout = async () => {
+  return apiPost('/api/auth/logout', {});
 };
 
 export const forgotDealerPassword = async (username: string) => {
@@ -131,6 +137,8 @@ export const universalSearch = async (query: string): Promise<any[]> => {
 export const api = {
   loginAsAdmin,
   loginAsDealer,
+  getCurrentUser,
+  logout,
   forgotDealerPassword,
   changePassword,
   getEmployees,

@@ -8,7 +8,7 @@ export interface AuthContextType {
   needsPasswordChange: boolean;
   dealerLogin: (emailOrUsername: string, password: string, rememberMe: boolean) => Promise<void>;
   adminLogin: (password: string, rememberMe: boolean) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   updatePassword: (newPassword: string) => Promise<void>;
   updateUser: (updatedData: Partial<User>) => void;
 }
@@ -23,29 +23,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     const checkPersistedUser = async () => {
       try {
-        const token = localStorage.getItem('ur:auth:token');
-        const dealerData = localStorage.getItem('ur:auth:dealer');
-        
-        if (token && dealerData) {
-          const dealer = JSON.parse(dealerData);
-          // Reconstruct minimal user object from dealer data
+        const u = await api.getCurrentUser();
+        if (u) {
           const userData: User = {
-            id: dealer.id,
-            username: dealer.username,
-            name: dealer.companyName,
-            email: dealer.email,
-            role: UserRole.DEALER,
-            dealerId: dealer.id,
+            id: u.id,
+            username: u.username,
+            name: u.companyName || u.name || '',
+            email: u.email,
+            role: u.role === 'admin' ? UserRole.ADMIN : UserRole.DEALER,
+            dealerId: u.id,
             tempPassword: null,
             tempPasswordExpiry: null,
           };
           setUser(userData);
-          setNeedsPasswordChange(false);
+          setNeedsPasswordChange(!!u.forcePasswordChange);
         }
       } catch (error) {
-        console.error("Failed to restore session:", error);
-        localStorage.removeItem('ur:auth:token');
-        localStorage.removeItem('ur:auth:dealer');
+        console.error('Failed to restore session', error);
       } finally {
         setLoading(false);
       }
@@ -63,18 +57,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const userData: User = {
       id: dealer.id,
       username: dealer.username,
-      name: dealer.companyName,
+      name: dealer.companyName || dealer.username,
       email: dealer.email,
       role: UserRole.DEALER,
       dealerId: dealer.id,
       tempPassword: null,
       tempPasswordExpiry: null,
     };
-    handleLoginSuccess(userData, false);
+    handleLoginSuccess(userData, !!dealer.forcePasswordChange);
   };
 
   const adminLogin = async (password: string, rememberMe: boolean) => {
-    await api.loginAsAdmin(password);
+    const admin = await api.loginAsAdmin(password);
     const adminUser: User = {
       id: 'admin',
       username: 'admin',
@@ -88,11 +82,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     handleLoginSuccess(adminUser, false);
   };
 
-  const logout = () => {
-    setUser(null);
-    setNeedsPasswordChange(false);
-    localStorage.removeItem('ur:auth:token');
-    localStorage.removeItem('ur:auth:dealer');
+  const logout = async () => {
+    try {
+      await api.logout();
+    } catch (err) {
+      console.warn('Logout request failed:', err);
+    } finally {
+      setUser(null);
+      setNeedsPasswordChange(false);
+    }
   };
 
   const updatePassword = async (newPassword: string) => {

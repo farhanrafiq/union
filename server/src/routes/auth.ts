@@ -8,6 +8,16 @@ import { verifyAdminPassword, generateAdminToken } from '../middleware/adminAuth
 const router = Router();
 const loginSchema = z.object({ username: z.string(), password: z.string() });
 
+// cookie options
+const cookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax' as const,
+  maxAge: 12 * 60 * 60 * 1000, // 12 hours
+};
+
+const signToken = (payload: object) => jwt.sign(payload, process.env.JWT_SECRET || 'changeme', { expiresIn: '12h' });
+
 // Admin login
 router.post('/admin/login', async (req: Request, res: Response) => {
   const parse = loginSchema.safeParse(req.body);
@@ -19,7 +29,8 @@ router.post('/admin/login', async (req: Request, res: Response) => {
   }
 
   const token = generateAdminToken();
-  res.json({ token, admin: { id: 'admin-1', username: 'admin', role: 'admin' } });
+  res.cookie('token', token, cookieOptions);
+  res.json({ admin: { id: 'admin-1', username: 'admin', role: 'admin' } });
 });
 
 router.post('/login', async (req: Request, res: Response) => {
@@ -35,8 +46,37 @@ router.post('/login', async (req: Request, res: Response) => {
   const ok = await bcrypt.compare(password, dealer.passwordHash);
   if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
 
-  const token = jwt.sign({ dealerId: dealer.id, username: dealer.username }, process.env.JWT_SECRET || 'changeme', { expiresIn: '12h' });
-  res.json({ token, dealer: { id: dealer.id, username: dealer.username, email: dealer.email, forcePasswordChange: dealer.forcePasswordChange } });
+  const token = signToken({ dealerId: dealer.id, username: dealer.username });
+  res.cookie('token', token, cookieOptions);
+  res.json({ dealer: { id: dealer.id, username: dealer.username, email: dealer.email, companyName: dealer.companyName, forcePasswordChange: dealer.forcePasswordChange } });
+});
+
+// Current logged-in user
+router.get('/me', async (req: Request, res: Response) => {
+  const header = req.headers.authorization || '';
+  const headerToken = header.startsWith('Bearer ') ? header.slice(7) : null;
+  const cookieToken = (req as any).cookies?.token as string | undefined;
+  const token = headerToken || cookieToken;
+  if (!token) return res.json({ user: null });
+
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET || 'changeme') as any;
+    if (payload.dealerId) {
+      const dealer = await prisma.dealer.findUnique({ where: { id: payload.dealerId } });
+      if (!dealer) return res.json({ user: null });
+      return res.json({ user: { id: dealer.id, username: dealer.username, email: dealer.email, companyName: dealer.companyName, role: 'dealer', forcePasswordChange: dealer.forcePasswordChange } });
+    }
+    // admin tokens may not have dealerId
+    return res.json({ user: { id: 'admin', username: 'admin', email: 'admin@union.com', role: 'admin' } });
+  } catch {
+    return res.json({ user: null });
+  }
+});
+
+// Logout - clear cookie
+router.post('/logout', (_req: Request, res: Response) => {
+  res.clearCookie('token', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' });
+  res.json({ ok: true });
 });
 
 const forgotSchema = z.object({ username: z.string() });
@@ -73,7 +113,9 @@ router.post('/forgot', async (req: Request, res: Response) => {
 const changeSchema = z.object({ newPassword: z.string().min(6) });
 router.post('/change-password', async (req: Request, res: Response) => {
   const header = req.headers.authorization || '';
-  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+  const headerToken = header.startsWith('Bearer ') ? header.slice(7) : null;
+  const cookieToken = (req as any).cookies?.token as string | undefined;
+  const token = headerToken || cookieToken;
   if (!token) return res.status(401).json({ error: 'Unauthorized' });
   let payload: any;
   try {

@@ -7,22 +7,15 @@ export class ApiError extends Error {
   }
 }
 
-const checkApiConfigured = () => {
-  if (!API_BASE) {
-    throw new ApiError(
-      500,
-      'API not configured. Please set VITE_API_URL environment variable and deploy the backend.'
-    );
-  }
-};
-
 export const authHeader = () => {
   const token = localStorage.getItem('ur:auth:token');
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
 export const apiGet = async <T>(path: string): Promise<T> => {
-  checkApiConfigured();
+  if (!API_BASE) {
+    throw new ApiError(500, 'API not configured');
+  }
   const r = await fetch(`${API_BASE}${path}`, { 
     headers: { 'Content-Type': 'application/json', ...authHeader() } 
   });
@@ -39,7 +32,9 @@ export const apiGet = async <T>(path: string): Promise<T> => {
 };
 
 export const apiPost = async <T>(path: string, body: any): Promise<T> => {
-  checkApiConfigured();
+  if (!API_BASE) {
+    throw new ApiError(500, 'API not configured');
+  }
   const r = await fetch(`${API_BASE}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...authHeader() },
@@ -58,7 +53,9 @@ export const apiPost = async <T>(path: string, body: any): Promise<T> => {
 };
 
 export const apiPatch = async <T>(path: string, body: any): Promise<T> => {
-  checkApiConfigured();
+  if (!API_BASE) {
+    throw new ApiError(500, 'API not configured');
+  }
   const r = await fetch(`${API_BASE}${path}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...authHeader() },

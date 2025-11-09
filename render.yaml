@@ -1,11 +1,10 @@
 services:
-  # Backend API (Express + Prisma + PostgreSQL)
+  # Full-stack app (Backend + Frontend in one service)
   - type: web
-    name: union-registry-api
+    name: union-app
     runtime: node
-    rootDir: server
-    buildCommand: npm ci && npm run generate && npm run build
-    startCommand: npm start
+    buildCommand: npm ci && npm run build && cd server && npm ci && npm run generate && npm run build
+    startCommand: cd server && npm start
     envVars:
       - key: DATABASE_URL
         sync: false
@@ -14,23 +13,4 @@ services:
       - key: NODE_ENV
         value: production
       - key: FRONTEND_ORIGIN
-        fromService:
-          name: union-registry-frontend
-          type: static_site
-          property: url
-
-  # Frontend Static Site (React + Vite)
-  - type: static_site
-    name: union-registry-frontend
-    buildCommand: npm ci && npm run build
-    staticPublishPath: dist
-    envVars:
-      - key: VITE_API_URL
-        fromService:
-          name: union-registry-api
-          type: web
-          property: url
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
+        value: https://union-1.onrender.com

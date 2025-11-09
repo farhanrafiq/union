@@ -35,6 +35,7 @@ const DealerDashboard: React.FC<DealerDashboardProps> = ({ currentPage = 'Dashbo
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [dealerAuditLogs, setDealerAuditLogs] = useState<AuditLog[]>([]);
+  const [error, setError] = useState<string>('');
 
   const [isEmployeeModalOpen, setEmployeeModalOpen] = useState(false);
   const [isCustomerModalOpen, setCustomerModalOpen] = useState(false);
@@ -46,9 +47,13 @@ const DealerDashboard: React.FC<DealerDashboardProps> = ({ currentPage = 'Dashbo
 
   const fetchData = () => {
     if (user?.dealerId) {
-      api.getEmployees(user.dealerId).then(setEmployees);
-      api.getCustomers(user.dealerId).then(setCustomers);
-      api.getDealerAuditLogs(user.dealerId).then(setDealerAuditLogs);
+      api.getEmployees().then(setEmployees).catch(err => setError(err.message));
+      api.getCustomers().then(setCustomers).catch(err => setError(err.message));
+      api.getAuditLogs().then(logs => {
+        // Filter logs for this dealer
+        const dealerLogs = logs.filter(log => log.dealerId === user.dealerId);
+        setDealerAuditLogs(dealerLogs);
+      }).catch(err => setError(err.message));
     }
   };
 

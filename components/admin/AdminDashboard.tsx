@@ -78,8 +78,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentPage = 'Dashboar
         if (selectedDealer) { // Editing existing dealer
             await api.updateDealer(selectedDealer.id, formData);
         } else { // Creating new dealer
-            const { dealer, tempPassword } = await api.createDealer(formData, username);
-            setPasswordInfo({ dealerName: dealer.primaryContactName, tempPass: tempPassword });
+            const dealer = await api.createDealer(username, formData.primaryContactEmail, formData.companyName);
+            setPasswordInfo({ dealerName: dealer.companyName, tempPass: 'Check email for password' });
         }
         setIsDealerModalOpen(false);
         setSelectedDealer(null);
@@ -96,8 +96,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentPage = 'Dashboar
 
   const handleConfirmReset = async () => {
     if (dealerToReset) {
-      const newPassword = await api.resetDealerPassword(dealerToReset.id);
-      setPasswordInfo({ dealerName: dealerToReset.primaryContactName, tempPass: newPassword });
+      const result = await api.resetDealerPassword(dealerToReset.id);
+      setPasswordInfo({ dealerName: dealerToReset.primaryContactName, tempPass: result.tempPassword });
       setIsResetModalOpen(false);
       setDealerToReset(null);
       fetchData();

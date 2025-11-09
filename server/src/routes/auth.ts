@@ -7,6 +7,7 @@ import { verifyAdminPassword, generateAdminToken } from '../middleware/adminAuth
 
 const router = Router();
 const loginSchema = z.object({ username: z.string(), password: z.string() });
+const adminLoginSchema = z.object({ password: z.string() });
 
 // cookie options
 const cookieOptions = {
@@ -20,7 +21,7 @@ const signToken = (payload: object) => jwt.sign(payload, process.env.JWT_SECRET 
 
 // Admin login
 router.post('/admin/login', async (req: Request, res: Response) => {
-  const parse = loginSchema.safeParse(req.body);
+  const parse = adminLoginSchema.safeParse(req.body);
   if (!parse.success) return res.status(400).json({ error: 'Invalid credentials' });
 
   const { password } = parse.data;

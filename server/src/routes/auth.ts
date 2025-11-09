@@ -17,7 +17,7 @@ const cookieOptions = {
   maxAge: 12 * 60 * 60 * 1000, // 12 hours
 };
 
-const signToken = (payload: object) => jwt.sign(payload, process.env.JWT_SECRET || 'changeme', { expiresIn: '12h' });
+const signToken = (payload: object) => jwt.sign(payload, 'union-secret-2025', { expiresIn: '12h' });
 
 // Admin login
 router.post('/admin/login', async (req: Request, res: Response) => {
@@ -61,7 +61,7 @@ router.get('/me', async (req: Request, res: Response) => {
   if (!token) return res.json({ user: null });
 
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET || 'changeme') as any;
+    const payload = jwt.verify(token, 'union-secret-2025') as any;
     if (payload.dealerId) {
       const dealer = await prisma.dealer.findUnique({ where: { id: payload.dealerId } });
       if (!dealer) return res.json({ user: null });
@@ -120,7 +120,7 @@ router.post('/change-password', async (req: Request, res: Response) => {
   if (!token) return res.status(401).json({ error: 'Unauthorized' });
   let payload: any;
   try {
-    payload = jwt.verify(token, process.env.JWT_SECRET || 'changeme') as { dealerId: string };
+    payload = jwt.verify(token, 'union-secret-2025') as { dealerId: string };
   } catch {
     return res.status(401).json({ error: 'Unauthorized' });
   }

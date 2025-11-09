@@ -9,9 +9,7 @@ export interface AdminAuthToken {
   role: 'admin';
 }
 
-// For simplicity, using hardcoded admin password matching frontend
-// In production, store hashed admin credentials in Admin table
-const ADMIN_PASSWORD = 'Union@2025';
+const ADMIN_PASSWORD = 'Admin@2025';
 
 export const requireAdmin = async (req: Request, res: Response, next: NextFunction) => {
   const header = req.headers.authorization || '';
@@ -20,7 +18,7 @@ export const requireAdmin = async (req: Request, res: Response, next: NextFuncti
   if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET || 'changeme') as any;
+    const payload = jwt.verify(token, 'union-secret-2025') as any;
     
     // Check if it's an admin token
     if (payload.role !== 'admin') {
@@ -42,7 +40,7 @@ export const verifyAdminPassword = (password: string): boolean => {
 export const generateAdminToken = (): string => {
   return jwt.sign(
     { adminId: 'admin-1', username: 'admin', role: 'admin' },
-    process.env.JWT_SECRET || 'changeme',
+    'union-secret-2025',
     { expiresIn: '12h' }
   );
 };

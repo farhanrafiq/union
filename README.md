@@ -2,6 +2,12 @@
 
 A full-stack application for managing dealer employees and customers with admin oversight.
 
+## ⚠️ Important: API Required
+
+**This application requires a backend API connected to Neon PostgreSQL database.** 
+
+All data is stored in the cloud - there is no localStorage fallback. You must configure the API connection before the app will work.
+
 ## 🚀 Quick Deploy to Render
 
 This app is designed to run on **Render** with **Neon PostgreSQL**. No localhost setup needed!
@@ -41,14 +47,78 @@ Your app will be live at: `https://union-registry-frontend.onrender.com`
 
 ---
 
-## 🔧 Local Development (Optional)
+## 🔧 Local Development Setup
 
-If you want to develop locally:
+### Prerequisites
+1. **Neon PostgreSQL Database** - Create free database at [neon.tech](https://neon.tech)
+2. **Node.js 18+** - Download from [nodejs.org](https://nodejs.org)
 
-### Backend
+### Backend Setup
+
+1. **Create Neon Database**
+   - Go to [neon.tech](https://neon.tech) and sign up
+   - Create a new project
+   - Copy your connection string (format: `postgresql://user:pass@host/db?sslmode=require`)
+
+2. **Configure Backend**
 ```bash
 cd server
+npm install
 
+# Create .env file
+echo DATABASE_URL=your_neon_connection_string > .env
+echo JWT_SECRET=your_secret_key_min_32_chars >> .env
+echo ADMIN_PASSWORD=YourSecurePassword123! >> .env
+echo FRONTEND_ORIGIN=http://localhost:5173 >> .env
+```
+
+3. **Setup Database**
+```bash
+# Generate Prisma client
+npx prisma generate
+
+# Run migrations to create tables
+npx prisma migrate deploy
+
+# Seed database with admin user
+npm run seed
+
+# Start server
+npm start
+```
+
+Server will run on `http://localhost:8080`
+
+### Frontend Setup
+
+1. **Configure Frontend**
+```bash
+cd ..  # Back to root directory
+npm install
+
+# Create .env file
+echo VITE_API_URL=http://localhost:8080 > .env
+```
+
+2. **Start Development Server**
+```bash
+npm run dev
+```
+
+Frontend will run on `http://localhost:5173`
+
+### 🎯 Testing the App
+
+1. Navigate to `http://localhost:5173`
+2. You should see the home page (not an API error screen)
+3. Click "Admin Login" and use your ADMIN_PASSWORD
+4. Create dealers and test all features
+
+⚠️ **If you see "API Not Configured" screen:**
+- Check that backend server is running on port 8080
+- Verify `.env` file exists in root with `VITE_API_URL=http://localhost:8080`
+- Check backend logs for errors
+- Test backend directly: `curl http://localhost:8080/health`
 
 ---
 

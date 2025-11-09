@@ -6,6 +6,7 @@ import ForcePasswordChange from './components/auth/ForcePasswordChange';
 import Layout from './components/layout/Layout';
 import AdminDashboard from './components/admin/AdminDashboard';
 import DealerDashboard from './components/dealer/DealerDashboard';
+import ApiCheck from './components/common/ApiCheck';
 import { useAuth } from './hooks/useAuth';
 import Footer from './components/common/Footer';
 
@@ -47,12 +48,14 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-background font-sans text-gray-800">
-      <main className="flex-grow flex flex-col">
-        {renderContent()}
-      </main>
-      <Footer />
-    </div>
+    <ApiCheck>
+      <div className="flex flex-col min-h-screen bg-background font-sans text-gray-800">
+        <main className="flex-grow flex flex-col">
+          {renderContent()}
+        </main>
+        <Footer />
+      </div>
+    </ApiCheck>
   );
 };
 

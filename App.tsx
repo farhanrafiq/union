@@ -39,7 +39,7 @@ const App: React.FC = () => {
         case 'adminLogin':
             return <AdminLoginPage onBack={() => setView('home')} />;
         case 'dealerLogin':
-            return <DealerLoginPage onBack={() => setView('dealerLogin')} />;
+            return <DealerLoginPage onBack={() => setView('home')} />;
         case 'home':
         default:
             return <HomePage onAdminLogin={() => setView('adminLogin')} onDealerLogin={() => setView('dealerLogin')} />;

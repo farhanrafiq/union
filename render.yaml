@@ -2,15 +2,8 @@ services:
   - type: web
     name: union-app
     runtime: node
-    buildCommand: |
-      npm ci
-      npm run build
-      cd server
-      npm ci
-      npx prisma generate
-      npx prisma db push --accept-data-loss
-      npm run build
-    startCommand: cd server && npm start
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
     envVars:
       - key: DATABASE_URL
         sync: false
@@ -20,5 +13,3 @@ services:
         value: production
       - key: ADMIN_PASSWORD
         value: Admin@2025
-      - key: PORT
-        value: 10000

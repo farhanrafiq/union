@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && cd server && npm ci && npx prisma generate && npx prisma db push --accept-data-loss && npx tsc -p tsconfig.json",
-    "start": "cd server && npm start",
+    "build": "vite build && cd server && npm ci && npx prisma generate && npx prisma db push --accept-data-loss && npx tsc",
+    "start": "node server/dist/index.js",
     "preview": "vite preview"
   },
   "engines": {
